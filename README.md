@@ -6,19 +6,16 @@
 
 ## 在线演示
 
-网页部分是纯前端，无需安装即可打开：
+**<https://signfff.github.io/visual-calculus/>** — 网页部分是纯前端，点开即用，无需安装。
 
 | 页面 | 内容 |
 | --- | --- |
-| [映射与函数](docs/mapping-and-function.html) | 并排对比一般映射、单射、满射、双射，动画演示逆映射存在的条件 |
-| [格林公式](docs/greens-theorem.html) | 曲线积分与二重积分的实时数值对照，解释两者为何相等 |
-| [对坐标的曲线积分](docs/line-integral.html) | 参数曲线上的几何图像与控制面板，观察 ∫P dx + Q dy 的累加过程 |
-| [心形曲面](docs/heart-surface.html) | 参数方程 x = cos u·(2cos v − cos 2v) 的心形曲面海报 |
+| [映射与函数](https://signfff.github.io/visual-calculus/mapping-and-function.html) | 并排对比一般映射、单射、满射、双射，动画演示逆映射存在的条件 |
+| [格林公式](https://signfff.github.io/visual-calculus/greens-theorem.html) | 曲线积分与二重积分的实时数值对照，解释两者为何相等 |
+| [对坐标的曲线积分](https://signfff.github.io/visual-calculus/line-integral.html) | 参数曲线上的几何图像与控制面板，观察 ∫P dx + Q dy 的累加过程 |
+| [心形曲面](https://signfff.github.io/visual-calculus/heart-surface.html) | 参数方程 x = cos u·(2cos v − cos 2v) 的心形曲面海报 |
 
-> 仓库开启 GitHub Pages（Settings → Pages → 选择分支的 `/docs` 目录）后，
-> 即可通过 <https://signfff.github.io/可视化高数知识点/> 直接访问，索引页为 `docs/index.html`。
-
-本地查看：克隆仓库后双击 `docs/` 里的任意 `.html` 文件即可，其中格林公式与映射页面通过 CDN 加载 MathJax，需要联网才能正确渲染公式。
+页面源码在 `docs/`，克隆后双击任意 `.html` 也能本地打开；格林公式与映射两页通过 CDN 加载 MathJax，需要联网才能正确渲染公式。
 
 ## Python 交互程序
 
