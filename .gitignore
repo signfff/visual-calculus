@@ -16,13 +16,15 @@ __pycache__/
 venv/
 env/
 
+# ---- 教学文档 ----
+# 仓库里只放导出的 PDF，.docx 原稿留在本地
+*.docx
+
 # ---- 编辑器 / 系统 ----
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-# Word 打开文档时产生的临时锁文件
-~$*.docx
 
 # ---- 本地工具配置 ----
 .claude/settings.local.json
