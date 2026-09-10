@@ -1,0 +1,28 @@
+# ---- 大文件：不随仓库分发 ----
+# 打包产物（可用 scripts/build.ps1 从源码重新生成）
+dist/
+build/
+*.exe
+*.spec
+
+# 课堂录屏（体积过大，不入库）
+videos/
+*.mp4
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+# Word 打开文档时产生的临时锁文件
+~$*.docx
+
+# ---- 本地工具配置 ----
+.claude/settings.local.json

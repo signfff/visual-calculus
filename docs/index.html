@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>高等数学可视化教学工具集</title>
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --card: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #5f6368;
+    --line: #e3e3e0;
+    --accent: #2f6f9f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16171a;
+      --card: #1f2124;
+      --ink: #ececec;
+      --muted: #a0a4aa;
+      --line: #2e3135;
+      --accent: #6fb2e0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 48px 20px 64px;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.7 "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; }
+  h1 { margin: 0 0 8px; font-size: 1.6rem; letter-spacing: .01em; }
+  .lede { margin: 0 0 36px; color: var(--muted); }
+  .grid { display: grid; gap: 14px; }
+  a.card {
+    display: block;
+    padding: 18px 20px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color .15s, transform .15s;
+  }
+  a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  a.card h2 { margin: 0 0 6px; font-size: 1.05rem; color: var(--accent); }
+  a.card p { margin: 0; color: var(--muted); font-size: .92rem; }
+  footer {
+    margin-top: 40px; padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--muted); font-size: .88rem;
+  }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>高等数学可视化教学工具集</h1>
+  <p class="lede">把抽象定义画出来——以下页面均为纯前端，点开即可用于课堂演示。</p>
+
+  <div class="grid">
+    <a class="card" href="mapping-and-function.html">
+      <h2>映射与函数</h2>
+      <p>并排对比一般映射、单射、满射、双射，动画演示逆映射存在的条件。</p>
+    </a>
+    <a class="card" href="greens-theorem.html">
+      <h2>格林公式</h2>
+      <p>曲线积分与二重积分的实时数值对照，解释两者为何相等。</p>
+    </a>
+    <a class="card" href="line-integral.html">
+      <h2>对坐标的曲线积分</h2>
+      <p>参数曲线上的几何图像与控制面板，观察 ∫P dx + Q dy 的累加过程。</p>
+    </a>
+    <a class="card" href="heart-surface.html">
+      <h2>心形曲面</h2>
+      <p>参数方程 x = cos u·(2cos v − cos 2v) 的心形曲面海报。</p>
+    </a>
+  </div>
+
+  <footer>
+    另有 3 个 Python 交互程序（导数定义、定积分元素法、向量概念）需本地运行，
+    安装与打包说明见仓库 <a href="../README.md">README</a>。
+  </footer>
+</main>
+</body>
+</html>

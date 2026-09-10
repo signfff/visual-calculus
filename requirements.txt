@@ -1,0 +1,19 @@
+# 全部 Python 程序的依赖合集。只想跑其中一个，可按下面注释挑选安装。
+
+# 通用（导数定义、定积分元素法）
+numpy>=1.24
+matplotlib>=3.7
+
+# 导数定义可视化：符号求导
+sympy>=1.12
+
+# 定积分元素法：Qt 桌面界面
+PyQt5>=5.15
+
+# 向量概念可视化：Dash 网页应用
+dash>=2.16
+plotly>=5.20
+dash-bootstrap-components>=1.6
+
+# 可选：把桌面程序打包成单文件 exe
+pyinstaller>=6.6

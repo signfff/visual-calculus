@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>对坐标的曲线积分可视化</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --bg2: #eef4ff;
+      --surface: #ffffff;
+      --surface-2: #f8fbff;
+      --surface-3: #f7f8fc;
+      --text: #132238;
+      --muted: #627089;
+      --line: #dbe6f3;
+      --line-strong: #c9d9ee;
+      --brand: #2563eb;
+      --brand-strong: #1d4ed8;
+      --accent: #f59e0b;
+      --cyan: #06b6d4;
+      --danger: #ef4444;
+      --green: #16a34a;
+      --purple: #8b5cf6;
+      --shadow: 0 18px 48px rgba(15, 23, 42, .09);
+      --shadow-soft: 0 10px 26px rgba(15, 23, 42, .06);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html {
+      scroll-behavior: smooth
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, .95), transparent 24%),
+        radial-gradient(circle at 88% 8%, rgba(37, 99, 235, .10), transparent 22%),
+        radial-gradient(circle at 15% 85%, rgba(245, 158, 11, .10), transparent 26%),
+        linear-gradient(180deg, var(--bg2), var(--bg));
+      padding: 12px;
+    }
+
+    .wrap {
+      max-width: 1360px;
+      margin: 0 auto
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(300px, .86fr);
+      gap: 22px;
+      margin-bottom: 24px;
+      align-items: stretch;
+    }
+
+    .hero-main,
+    .hero-side,
+    .panel,
+    .stage {
+      background: rgba(255, 255, 255, .9);
+      border: 1px solid rgba(201, 217, 238, .78);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero-main,
+    .hero-side,
+    .stage,
+    .panel {
+      border-radius: var(--radius-xl);
+    }
+
+    .hero-main {
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-main::after {
+      content: "";
+      position: absolute;
+      inset: auto -40px -70px auto;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(37, 99, 235, .15), transparent 68%);
+      pointer-events: none;
+    }
+
+    .eyebrow,
+    .chip,
+    .pill,
+    .toolbar button,
+    .minor-btn,
+    .legend-item,
+    .canvas-help,
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .eyebrow {
+      padding: 8px 14px;
+      color: var(--brand-strong);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      background: rgba(37, 99, 235, .06);
+      border-color: rgba(37, 99, 235, .16);
+    }
+
+    h1 {
+      margin: 16px 0 14px;
+      font-size: clamp(32px, 4.4vw, 52px);
+      line-height: 1.08;
+      letter-spacing: -.02em;
+      font-family: "Source Han Serif SC", "Noto Serif SC", "Songti SC", serif;
+      color: #102445;
+    }
+
+    .lead {
+      margin: 0;
+      max-width: 880px;
+      color: var(--muted);
+      line-height: 1.82;
+      font-size: 16px;
+    }
+
+    .hero-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .chip {
+      padding: 6px 10px;
+      color: #16365f;
+      background: rgba(248, 251, 255, .94);
+      border-color: rgba(37, 99, 235, .14);
+      font: 700 14px/1.2 "JetBrains Mono", "Consolas", monospace;
+    }
+
+    .hero-side {
+      padding: 22px;
+      display: grid;
+      gap: 10px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .94), rgba(245, 248, 255, .94));
+    }
+
+    .hero-note {
+      padding: 18px;
+      border-radius: 20px;
+      color: #113252;
+      background: linear-gradient(180deg, rgba(37, 99, 235, .08), rgba(6, 182, 212, .05));
+      border: 1px solid rgba(37, 99, 235, .12);
+      line-height: 1.8;
+      font-size: 15px;
+    }
+
+    .hero-note strong {
+      color: var(--brand-strong)
+    }
+
+    .key-points {
+      display: grid;
+      gap: 10px;
+    }
+
+    .point {
+      display: flex;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .point-num {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      flex: none;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+    }
+
+    .point p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 14px
+    }
+
+    .point strong {
+      color: var(--text)
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.62fr) minmax(320px, .9fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .stage {
+      padding: 14px;
+      overflow: hidden;
+    }
+
+    .stage-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+
+    .title-stack h2,
+    .panel h2 {
+      margin: 0 0 8px;
+      font-size: 19px;
+      color: #102b4d;
+    }
+
+    .subtle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      color: #1f4c85;
+      font-size: 13px;
+      font-weight: 700;
+      background: rgba(37, 99, 235, .05);
+      border-color: rgba(37, 99, 235, .12);
+    }
+
+    .canvas-shell {
+      position: relative;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, #f7fbff 45%, #f8f8fc 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
+    }
+
+    .canvas-wrap {
+      position: relative;
+      height: min(55vh, 500px);
+      min-height: 360px;
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    canvas.dragging {
+      cursor: grabbing
+    }
+
+    .canvas-help {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 2;
+      padding: 10px 14px;
+      color: #24456d;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(255, 255, 255, .92);
+      border-color: rgba(37, 99, 235, .12);
+      box-shadow: 0 10px 22px rgba(15, 23, 42, .06);
+    }
+
+    .canvas-overlay {
+      position: absolute;
+      left: 18px;
+      bottom: 18px;
+      z-index: 2;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .badge {
+      padding: 8px 12px;
+      color: #234260;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(255, 255, 255, .95);
+      border-color: rgba(37, 99, 235, .10);
+      box-shadow: 0 10px 20px rgba(15, 23, 42, .05);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 10px;
+      align-items: center;
+    }
+
+    .toolbar-group,
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .toolbar button,
+    .minor-btn {
+      appearance: none;
+      border: 1px solid var(--line);
+      padding: 11px 16px;
+      cursor: pointer;
+      font: 700 14px/1 inherit;
+      color: #264265;
+      background: #fff;
+      transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+    }
+
+    .toolbar button:hover,
+    .minor-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 22px rgba(15, 23, 42, .06);
+    }
+
+    .toolbar button.active,
+    .minor-btn.active {
+      color: #fff;
+      background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+      border-color: transparent;
+      box-shadow: 0 16px 28px rgba(37, 99, 235, .24);
+    }
+
+    .legend {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--line);
+    }
+
+    .compact-legend {
+      gap: 8px;
+    }
+
+    .legend-item {
+      padding: 6px 10px;
+      color: #2d4768;
+      font-size: 12px;
+      background: rgba(248, 251, 255, .8);
+      border-color: rgba(37, 99, 235, .10);
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+      flex: none;
+    }
+
+    .side {
+      display: block;
+      height: 100%;
+      min-height: 100%;
+    }
+
+    .panel {
+      padding: 14px
+    }
+
+    .side-panel {
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto auto auto auto 1fr;
+      gap: 14px;
+    }
+
+    .side-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .side-tag {
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(37, 99, 235, .12);
+      background: rgba(37, 99, 235, .06);
+      color: var(--brand-strong);
+      font: 800 12px/1 "JetBrains Mono", "Consolas", monospace;
+    }
+
+    .stat-grid,
+    .mini-grid,
+    .compact-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .stat-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+
+    .mini-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+
+    .compact-grid {
+      grid-template-columns: 1fr
+    }
+
+    .cell,
+    .info-box {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fff, #fbfdff);
+    }
+
+    .cell {
+      padding: 10px 12px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .cell .label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .value {
+      font: 800 22px/1.08 "JetBrains Mono", "Consolas", monospace;
+      color: #123354;
+      letter-spacing: -.02em;
+      word-break: break-word;
+    }
+
+    .value.accent {
+      color: #c47a08
+    }
+
+    .value.cyan {
+      color: #0f7490
+    }
+
+    .value.green {
+      color: #137333
+    }
+
+    .value.small {
+      font-size: 16px
+    }
+
+
+    .compact-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .compact-points {
+      display: grid;
+      gap: 10px;
+    }
+
+    .point-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #fff, #fbfdff);
+      font-family: "JetBrains Mono", "Consolas", monospace;
+      color: #163b65;
+      font-size: 13px;
+    }
+
+    .point-line span:first-child {
+      color: var(--muted);
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .compact-formula {
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px dashed rgba(37, 99, 235, .18);
+      background: rgba(248, 251, 255, .88);
+      color: #163b65;
+      font: 700 13px/1.7 "JetBrains Mono", "Consolas", monospace;
+    }
+
+    .control-box {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #fff, #fbfdff);
+    }
+
+    .error-box,
+    .code-box,
+    .alert-box {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      border: 1px solid var(--line);
+    }
+
+    .error-box {
+      background: rgba(245, 158, 11, .09);
+      color: #8a5704;
+    }
+
+
+    .code-box {
+      background: #f8fbff;
+      color: #163b65;
+      font-family: "JetBrains Mono", "Consolas", monospace;
+    }
+
+    .alert-box {
+      background: rgba(6, 182, 212, .08);
+      color: #14576a;
+    }
+
+    .range-row {
+      margin-top: 16px
+    }
+
+    .range-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      color: #234260;
+      font-weight: 700;
+    }
+
+    .range-val {
+      padding: 5px 11px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, .08);
+      color: var(--brand-strong);
+      font: 800 14px/1 "JetBrains Mono", "Consolas", monospace;
+      white-space: nowrap;
+    }
+
+    input[type="range"] {
+      --percent: 50%;
+      width: 100%;
+      appearance: none;
+      height: 8px;
+      border-radius: 999px;
+      outline: none;
+      background: linear-gradient(90deg, var(--brand) 0%, var(--brand) var(--percent), rgba(37, 99, 235, .16) var(--percent), rgba(37, 99, 235, .16) 100%);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      border: 4px solid var(--brand);
+      box-shadow: 0 5px 16px rgba(37, 99, 235, .22);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      border: 4px solid var(--brand);
+      box-shadow: 0 5px 16px rgba(37, 99, 235, .22);
+      cursor: pointer;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .minor-btn {
+      padding: 10px 14px;
+      font-size: 13px;
+      box-shadow: none;
+    }
+
+    .formula-card {
+      padding: 14px 16px;
+      line-height: 1.7;
+      color: #16365d;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .formula-card code {
+      font-family: "JetBrains Mono", "Consolas", monospace;
+      font-size: 13px;
+      color: #0f3b70;
+      background: rgba(37, 99, 235, .06);
+      padding: 2px 6px;
+      border-radius: 8px;
+    }
+
+    .foot-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    @media (max-width:1180px) {
+      body {
+        padding: 10px
+      }
+
+      .hero,
+      .layout {
+        grid-template-columns: 1fr
+      }
+
+      .side {
+        height: auto
+      }
+    }
+
+    @media (max-width:760px) {
+      body {
+        padding: 8px
+      }
+
+      .hero-main,
+      .hero-side,
+      .stage,
+      .panel {
+        border-radius: 22px
+      }
+
+      .stat-grid,
+      .mini-grid,
+      .compact-row {
+        grid-template-columns: 1fr
+      }
+
+      .stage-head {
+        flex-direction: column;
+        align-items: stretch
+      }
+
+      .pills {
+        justify-content: flex-start
+      }
+
+      .toolbar {
+        align-items: flex-start
+      }
+
+      .canvas-wrap {
+        height: min(50vh, 420px);
+        min-height: 300px
+      }
+
+      h1 {
+        font-size: 34px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <main class="layout">
+      <section class="stage">
+        <div class="stage-head">
+          <div class="title-stack">
+            <h2>几何图像</h2>
+
+          </div>
+          <div class="pills">
+            <span class="pill" id="zoomLabel">缩放 1.00×</span>
+            <span class="pill" id="focusPill">当前观察：第 1 段</span>
+            <span class="pill" id="countPill">分段数：16</span>
+          </div>
+        </div>
+
+        <div class="canvas-shell">
+          <div class="canvas-wrap">
+
+            <div class="canvas-overlay">
+              <span class="badge" id="approxBadge">当前近似：0.000000</span>
+              <span class="badge" id="segmentBadge">局部贡献：0.000000</span>
+            </div>
+            <canvas id="curveCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <button type="button" id="resetBtn">重置视图</button>
+            <button type="button" id="playBtn">播放分段</button>
+          </div>
+          <div class="toolbar-group">
+            <button type="button" class="active" id="fieldBtn">显示向量场</button>
+            <button type="button" class="active" id="chordBtn">显示分段弦线</button>
+          </div>
+        </div>
+
+
+
+        <div class="legend compact-legend">
+          <span class="legend-item"><i class="dot" style="background:#2563eb"></i>曲线</span>
+          <span class="legend-item"><i class="dot" style="background:#f59e0b"></i>当前段</span>
+          <span class="legend-item"><i class="dot" style="background:#06b6d4"></i>F(mid)</span>
+          <span class="legend-item"><i class="dot" style="background:#ef4444"></i>Δr</span>
+          <span class="legend-item"><i class="dot" style="background:#16a34a"></i>向量场</span>
+        </div>
+
+      </section>
+
+      <aside class="side">
+        <section class="panel side-panel">
+          <div class="side-head">
+            <h2>控制面板</h2>
+            <span class="side-tag" id="kText">1 / 16</span>
+          </div>
+
+          <div class="stat-grid">
+            <div class="cell">
+              <div class="label">解析值</div>
+              <div class="value">1.000000</div>
+            </div>
+            <div class="cell">
+              <div class="label">数值近似</div>
+              <div class="value accent" id="approxText">0.000000</div>
+            </div>
+          </div>
+
+          <div class="mini-grid">
+            <div class="cell">
+              <div class="label">累计</div>
+              <div class="value small cyan" id="cumText">0.000000</div>
+            </div>
+            <div class="cell">
+              <div class="label">局部贡献</div>
+              <div class="value small" id="dotText">0.000000</div>
+            </div>
+          </div>
+
+          <div class="control-box">
+            <div class="range-row" style="margin-top:0">
+              <div class="range-head"><span>分段数 N</span><span class="range-val" id="nText">16</span></div>
+              <input type="range" id="nSlider" min="2" max="96" step="1" value="16">
+            </div>
+            <div class="range-row">
+              <div class="range-head"><span>当前段 k</span><span class="range-val" id="segmentProgressRatio">6.25%</span>
+              </div>
+              <input type="range" id="kSlider" min="1" max="16" step="1" value="1">
+            </div>
+            <div class="btn-row">
+              <button type="button" class="minor-btn" id="prevBtn">上一段</button>
+              <button type="button" class="minor-btn" id="nextBtn">下一段</button>
+              <button type="button" class="minor-btn" id="snapBtn">全局视图</button>
+            </div>
+          </div>
+
+          <div class="compact-points">
+            <div class="point-line"><span>Δr</span><strong id="drText">(0.0000, 0.0000)</strong></div>
+            <div class="point-line"><span>F(mid)</span><strong id="fText">(0.0000, 0.0000)</strong></div>
+          </div>
+
+          <div class="error-box" id="errorText">绝对误差：0.000000e+0 ｜ 相对误差：0.000000%</div>
+
+          <span id="shareText" hidden>0.00%</span>
+          <span id="signText" hidden>正贡献</span>
+          <span id="startText" hidden>(0.0000, 0.0000)</span>
+          <span id="midText" hidden>(0.0000, 0.0000)</span>
+          <span id="endText" hidden>(0.0000, 0.0000)</span>
+          <span id="angleText" hidden>夹角信息会显示在这里。</span>
+          <span id="segmentProgressText" hidden>1</span>
+          <span id="progressFill" hidden></span>
+          <span id="meterFill" hidden></span>
+          <span id="kMarker" hidden></span>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById("curveCanvas");
+      const ctx = canvas.getContext("2d");
+      const canvasWrap = document.querySelector(".canvas-wrap");
+
+      const nSlider = document.getElementById("nSlider");
+      const kSlider = document.getElementById("kSlider");
+      const nText = document.getElementById("nText");
+      const kText = document.getElementById("kText");
+      const kMarker = document.getElementById("kMarker");
+      const meterFill = document.getElementById("meterFill");
+      const approxText = document.getElementById("approxText");
+      const cumText = document.getElementById("cumText");
+      const shareText = document.getElementById("shareText");
+      const signText = document.getElementById("signText");
+      const errorText = document.getElementById("errorText");
+      const drText = document.getElementById("drText");
+      const fText = document.getElementById("fText");
+      const dotText = document.getElementById("dotText");
+      const angleText = document.getElementById("angleText");
+      const startText = document.getElementById("startText");
+      const midText = document.getElementById("midText");
+      const endText = document.getElementById("endText");
+      const focusPill = document.getElementById("focusPill");
+      const countPill = document.getElementById("countPill");
+      const zoomLabel = document.getElementById("zoomLabel");
+      const approxBadge = document.getElementById("approxBadge");
+      const segmentBadge = document.getElementById("segmentBadge");
+      const segmentProgressText = document.getElementById("segmentProgressText");
+      const segmentProgressRatio = document.getElementById("segmentProgressRatio");
+      const progressFill = document.getElementById("progressFill");
+
+      const resetBtn = document.getElementById("resetBtn");
+      const playBtn = document.getElementById("playBtn");
+      const fieldBtn = document.getElementById("fieldBtn");
+      const chordBtn = document.getElementById("chordBtn");
+      const prevBtn = document.getElementById("prevBtn");
+      const nextBtn = document.getElementById("nextBtn");
+      const snapBtn = document.getElementById("snapBtn");
+
+      const exact = 1;
+      const view0 = { xMin: -0.12, xMax: 1.18, yMin: -0.14, yMax: 1.18 };
+      const curve = t => ({ x: t, y: t * t });
+      const field = (x, y) => ({ x: y, y: x });
+
+      const state = {
+        n: 16,
+        k: 0,
+        showField: true,
+        showChords: true,
+        playTimer: null,
+        camera: { x: 0.52, y: 0.46, zoom: 1 },
+        drag: { on: false, moved: false, pointerId: null, x: 0, y: 0 },
+        cache: { segs: [], approx: 0, cumulative: [] }
+      };
+
+      const fmt = n => (Math.abs(n) < 1e-12 ? 0 : n).toFixed(4);
+      const pair = p => `(${fmt(p.x)}, ${fmt(p.y)})`;
+
+      function canvasSize() {
+        return { w: canvas.clientWidth || 900, h: canvas.clientHeight || 600 };
+      }
+
+      function fitCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const width = Math.round(rect.width * dpr);
+        const height = Math.round(rect.height * dpr);
+        if (!width || !height) return;
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        redraw();
+      }
+
+      function updateRangeFill(el) {
+        const min = +el.min || 0;
+        const max = +el.max || 100;
+        const val = +el.value;
+        const percent = max === min ? 0 : ((val - min) / (max - min)) * 100;
+        el.style.setProperty("--percent", `${percent}%`);
+      }
+
+      function viewRect() {
+        const { w, h } = canvasSize();
+        const aspect = w / h;
+        let worldW = (view0.xMax - view0.xMin) / state.camera.zoom;
+        let worldH = (view0.yMax - view0.yMin) / state.camera.zoom;
+        if (worldW / worldH > aspect) worldH = worldW / aspect;
+        else worldW = worldH * aspect;
+        return {
+          left: state.camera.x - worldW / 2,
+          right: state.camera.x + worldW / 2,
+          bottom: state.camera.y - worldH / 2,
+          top: state.camera.y + worldH / 2
+        };
+      }
+
+      function w2c(x, y) {
+        const r = viewRect();
+        const { w, h } = canvasSize();
+        return {
+          x: (x - r.left) / (r.right - r.left) * w,
+          y: h - (y - r.bottom) / (r.top - r.bottom) * h
+        };
+      }
+
+      function c2w(px, py) {
+        const r = viewRect();
+        const { w, h } = canvasSize();
+        return {
+          x: r.left + px / w * (r.right - r.left),
+          y: r.bottom + (h - py) / h * (r.top - r.bottom)
+        };
+      }
+
+      function pointer(e) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        };
+      }
+
+      function clamp(v, a, b) {
+        return Math.max(a, Math.min(b, v));
+      }
+
+      function arrow(a, b, color, width = 2, head = 8, alpha = 1) {
+        const p1 = w2c(a.x, a.y);
+        const p2 = w2c(b.x, b.y);
+        const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(p2.x, p2.y);
+        ctx.lineTo(p2.x - head * Math.cos(ang - Math.PI / 7), p2.y - head * Math.sin(ang - Math.PI / 7));
+        ctx.lineTo(p2.x - head * Math.cos(ang + Math.PI / 7), p2.y - head * Math.sin(ang + Math.PI / 7));
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function compute() {
+        let approx = 0;
+        const segs = [];
+        const cumulative = [];
+        for (let i = 0; i < state.n; i++) {
+          const t0 = i / state.n;
+          const t1 = (i + 1) / state.n;
+          const tm = (t0 + t1) / 2;
+          const a = curve(t0);
+          const b = curve(t1);
+          const m = curve(tm);
+          const dr = { x: b.x - a.x, y: b.y - a.y };
+          const fm = field(m.x, m.y);
+          const dot = fm.x * dr.x + fm.y * dr.y;
+          approx += dot;
+          cumulative.push(approx);
+          segs.push({ a, b, m, dr, fm, dot, t0, t1, tm });
+        }
+        state.cache = { segs, approx, cumulative };
+      }
+
+      function syncPanel() {
+        const seg = state.cache.segs[state.k];
+        const approx = state.cache.approx;
+        const cum = state.cache.cumulative[state.k];
+        const absErr = Math.abs(approx - exact);
+        const relErr = absErr / exact * 100;
+        const share = Math.abs(seg.dot) / Math.max(Math.abs(approx), 1e-12) * 100;
+        const progress = (state.k + 1) / state.n * 100;
+        const fmLen = Math.hypot(seg.fm.x, seg.fm.y);
+        const drLen = Math.hypot(seg.dr.x, seg.dr.y);
+        const cosTheta = fmLen * drLen < 1e-12 ? 0 : clamp(seg.dot / (fmLen * drLen), -1, 1);
+        const angle = Math.acos(cosTheta) * 180 / Math.PI;
+        const sign = seg.dot > 1e-12 ? "正贡献" : seg.dot < -1e-12 ? "负贡献" : "接近零";
+
+        nText.textContent = state.n;
+        kText.textContent = `${state.k + 1} / ${state.n}`;
+        nSlider.value = state.n;
+        kSlider.max = state.n;
+        kSlider.value = state.k + 1;
+        updateRangeFill(nSlider);
+        updateRangeFill(kSlider);
+
+        const leftPercent = ((state.k + 0.5) / state.n) * 100;
+        kMarker.style.left = `${leftPercent}%`;
+        meterFill.style.width = `${progress}%`;
+        progressFill.style.width = `${progress}%`;
+
+        focusPill.textContent = `当前观察：第 ${state.k + 1} 段`;
+        countPill.textContent = `分段数：${state.n}`;
+        approxText.textContent = approx.toFixed(6);
+        cumText.textContent = cum.toFixed(6);
+        shareText.textContent = `${share.toFixed(2)}%`;
+        signText.textContent = sign;
+        signText.className = `value small ${seg.dot >= 0 ? "green" : "accent"}`;
+
+        errorText.textContent = `绝对误差：${absErr.toExponential(6)} ｜ 相对误差：${relErr.toFixed(6)}%`;
+        if (absErr < 1e-5) {
+          errorText.style.background = "rgba(22,163,74,.10)";
+          errorText.style.color = "#176f38";
+          errorText.style.borderColor = "rgba(22,163,74,.18)";
+        } else {
+          errorText.style.background = "rgba(245,158,11,.09)";
+          errorText.style.color = "#8a5704";
+          errorText.style.borderColor = "rgba(245,158,11,.18)";
+        }
+
+        drText.textContent = pair(seg.dr);
+        fText.textContent = pair(seg.fm);
+        dotText.textContent = seg.dot.toFixed(6);
+        startText.textContent = pair(seg.a);
+        midText.textContent = pair(seg.m);
+        endText.textContent = pair(seg.b);
+        approxBadge.textContent = `当前近似：${approx.toFixed(6)}`;
+        segmentBadge.textContent = `局部贡献：${seg.dot.toFixed(6)}`;
+        segmentProgressText.textContent = state.k + 1;
+        segmentProgressRatio.textContent = `${progress.toFixed(2)}%`;
+
+        angleText.textContent = `夹角约 ${angle.toFixed(1)}°，当前为${sign}。`;
+      }
+
+      function drawGrid() {
+        const r = viewRect();
+        const { w, h } = canvasSize();
+        const z = state.camera.zoom;
+        let step = 0.2;
+        if (z > 3.6) step = 0.05;
+        else if (z > 1.9) step = 0.1;
+
+        ctx.save();
+
+        const bg = ctx.createLinearGradient(0, 0, 0, h);
+        bg.addColorStop(0, "rgba(255,255,255,.96)");
+        bg.addColorStop(1, "rgba(246,250,255,.98)");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.strokeStyle = "rgba(37,99,235,.09)";
+        ctx.lineWidth = 1;
+
+        for (let x = Math.floor(r.left / step) * step; x <= r.right + 1e-9; x += step) {
+          const p1 = w2c(x, r.bottom);
+          const p2 = w2c(x, r.top);
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+        }
+        for (let y = Math.floor(r.bottom / step) * step; y <= r.top + 1e-9; y += step) {
+          const p1 = w2c(r.left, y);
+          const p2 = w2c(r.right, y);
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+        }
+
+        const x0 = w2c(r.left, 0), x1 = w2c(r.right, 0), y0 = w2c(0, r.bottom), y1 = w2c(0, r.top);
+        ctx.strokeStyle = "rgba(19,34,56,.62)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x0.x, x0.y);
+        ctx.lineTo(x1.x, x1.y);
+        ctx.moveTo(y0.x, y0.y);
+        ctx.lineTo(y1.x, y1.y);
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(19,34,56,.72)";
+        ctx.font = "13px Microsoft YaHei";
+        const xl = w2c(r.right - 0.05, -0.05);
+        const yl = w2c(-0.04, r.top - 0.04);
+        const ol = w2c(-0.04, -0.04);
+        ctx.fillText("x", xl.x, xl.y);
+        ctx.fillText("y", yl.x, yl.y);
+        ctx.fillText("O", ol.x, ol.y);
+
+        ctx.restore();
+      }
+
+      function drawField() {
+        if (!state.showField) return;
+        const r = viewRect();
+        const step = 0.16 / Math.max(0.95, Math.sqrt(state.camera.zoom));
+        const maxLen = 0.095;
+        for (let x = Math.max(r.left, -0.08); x <= Math.min(r.right, 1.12); x += step) {
+          for (let y = Math.max(r.bottom, -0.08); y <= Math.min(r.top, 1.12); y += step) {
+            const v = field(x, y);
+            const len = Math.hypot(v.x, v.y);
+            if (len < 1e-8) continue;
+            const s = Math.min(maxLen / len, 0.36);
+            arrow({ x, y }, { x: x + v.x * s, y: y + v.y * s }, "rgba(22,163,74,.70)", 1.25, 7, 0.92);
+          }
+        }
+      }
+
+      function drawCurve() {
+        ctx.save();
+        ctx.beginPath();
+        for (let i = 0; i <= 360; i++) {
+          const t = i / 360;
+          const p = w2c(t, t * t);
+          if (!i) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        }
+
+        ctx.strokeStyle = "#2563eb";
+        ctx.lineWidth = 4.5;
+        ctx.lineCap = "round";
+        ctx.shadowColor = "rgba(37,99,235,.18)";
+        ctx.shadowBlur = 16;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        for (let t = 0.08; t <= 0.9; t += 0.16) {
+          arrow(curve(t), curve(t + 0.028), "rgba(37,99,235,.86)", 2.2, 9, 1);
+        }
+
+        const a = w2c(0, 0);
+        const b = w2c(1, 1);
+        [a, b].forEach((p, i) => {
+          ctx.fillStyle = "#2563eb";
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 13px Inter, Microsoft YaHei";
+          ctx.fillText(i === 0 ? "A" : "B", p.x - 4.8, p.y + 4.3);
+        });
+
+        ctx.restore();
+      }
+
+      function drawSegments() {
+        const segs = state.cache.segs;
+        const seg = segs[state.k];
+
+        if (state.showChords) {
+          ctx.save();
+          ctx.setLineDash([8, 7]);
+          ctx.strokeStyle = "rgba(245,158,11,.42)";
+          ctx.lineWidth = 1.7;
+          segs.forEach(s => {
+            const p1 = w2c(s.a.x, s.a.y);
+            const p2 = w2c(s.b.x, s.b.y);
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          });
+          ctx.restore();
+        }
+
+        const p1 = w2c(seg.a.x, seg.a.y);
+        const p2 = w2c(seg.b.x, seg.b.y);
+        const pm = w2c(seg.m.x, seg.m.y);
+
+        ctx.save();
+        ctx.strokeStyle = "#f59e0b";
+        ctx.lineWidth = 5.2;
+        ctx.lineCap = "round";
+        ctx.shadowColor = "rgba(245,158,11,.22)";
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = "rgba(245,158,11,.15)";
+        ctx.beginPath();
+        ctx.arc(pm.x, pm.y, 20, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#f59e0b";
+        ctx.beginPath();
+        ctx.arc(pm.x, pm.y, 6.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        const fieldScale = 0.17 / Math.max(1, Math.hypot(seg.fm.x, seg.fm.y));
+        arrow(seg.m, { x: seg.m.x + seg.fm.x * fieldScale, y: seg.m.y + seg.fm.y * fieldScale }, "#06b6d4", 3, 10, 1);
+        arrow(seg.a, seg.b, "#ef4444", 3, 10, 1);
+
+        ctx.save();
+        ctx.fillStyle = "#7c4a00";
+        ctx.font = "700 14px Microsoft YaHei";
+        ctx.fillText(`第 ${state.k + 1} 段`, pm.x + 18, pm.y - 18);
+        ctx.font = "700 13px JetBrains Mono, Consolas, monospace";
+        ctx.fillText(`F·Δr = ${seg.dot.toFixed(5)}`, pm.x + 18, pm.y + 4);
+        ctx.restore();
+      }
+
+      function redraw() {
+        const { w, h } = canvasSize();
+        ctx.clearRect(0, 0, w, h);
+        drawGrid();
+        drawField();
+        drawCurve();
+        drawSegments();
+      }
+
+      function setK(k) {
+        state.k = clamp(k, 0, state.n - 1);
+        syncPanel();
+        redraw();
+      }
+
+      function updateZoomLabel() {
+        zoomLabel.textContent = `缩放 ${state.camera.zoom.toFixed(2)}×`;
+      }
+
+      function zoomAt(px, py, dir) {
+        const oldZoom = state.camera.zoom;
+        const nextZoom = clamp(oldZoom * (dir > 0 ? 1.12 : 0.9), 0.8, 8);
+        if (Math.abs(nextZoom - oldZoom) < 1e-6) return;
+        const before = c2w(px, py);
+        state.camera.zoom = nextZoom;
+        const after = c2w(px, py);
+        state.camera.x += before.x - after.x;
+        state.camera.y += before.y - after.y;
+        updateZoomLabel();
+        redraw();
+      }
+
+      function stopPlay() {
+        if (state.playTimer) clearInterval(state.playTimer);
+        state.playTimer = null;
+        playBtn.textContent = "播放分段";
+        playBtn.classList.remove("active");
+      }
+
+      function togglePlay() {
+        if (state.playTimer) {
+          stopPlay();
+          return;
+        }
+        playBtn.textContent = "暂停播放";
+        playBtn.classList.add("active");
+        state.playTimer = setInterval(() => {
+          setK((state.k + 1) % state.n);
+        }, 900);
+      }
+
+      function resetCamera() {
+        state.camera = { x: 0.52, y: 0.46, zoom: 1 };
+        updateZoomLabel();
+        redraw();
+      }
+
+      function recompute() {
+        compute();
+        state.k = clamp(state.k, 0, state.n - 1);
+        syncPanel();
+        redraw();
+      }
+
+      function dist2(p, a, b) {
+        const abx = b.x - a.x;
+        const aby = b.y - a.y;
+        const apx = p.x - a.x;
+        const apy = p.y - a.y;
+        const ab2 = abx * abx + aby * aby;
+        if (!ab2) return apx * apx + apy * apy;
+        const t = clamp((apx * abx + apy * aby) / ab2, 0, 1);
+        const qx = a.x + t * abx;
+        const qy = a.y + t * aby;
+        const dx = p.x - qx;
+        const dy = p.y - qy;
+        return dx * dx + dy * dy;
+      }
+
+      function pickSegment(e) {
+        const p = pointer(e);
+        const w = c2w(p.x, p.y);
+        let best = 0;
+        let bestD = Infinity;
+        state.cache.segs.forEach((s, i) => {
+          const d = dist2(w, s.a, s.b);
+          if (d < bestD) {
+            bestD = d;
+            best = i;
+          }
+        });
+        setK(best);
+      }
+
+      canvas.addEventListener("wheel", e => {
+        e.preventDefault();
+        const p = pointer(e);
+        zoomAt(p.x, p.y, e.deltaY < 0 ? 1 : -1);
+      }, { passive: false });
+
+      canvas.addEventListener("pointerdown", e => {
+        const p = pointer(e);
+        const w = c2w(p.x, p.y);
+        state.drag = { on: true, moved: false, pointerId: e.pointerId, x: w.x, y: w.y };
+        canvas.classList.add("dragging");
+        canvas.setPointerCapture(e.pointerId);
+      });
+
+      canvas.addEventListener("pointermove", e => {
+        if (!state.drag.on || state.drag.pointerId !== e.pointerId) return;
+        const p = pointer(e);
+        const w = c2w(p.x, p.y);
+        const dx = w.x - state.drag.x;
+        const dy = w.y - state.drag.y;
+        if (Math.abs(dx) > 1e-6 || Math.abs(dy) > 1e-6) {
+          state.drag.moved = true;
+          state.camera.x -= dx;
+          state.camera.y -= dy;
+          state.drag.x = w.x;
+          state.drag.y = w.y;
+          redraw();
+        }
+      });
+
+      function releasePointer(e) {
+        if (!state.drag.on) return;
+        const wasMoved = state.drag.moved;
+        const samePointer = state.drag.pointerId === e.pointerId;
+        state.drag.on = false;
+        state.drag.pointerId = null;
+        canvas.classList.remove("dragging");
+        if (!wasMoved && samePointer) pickSegment(e);
+      }
+
+      canvas.addEventListener("pointerup", releasePointer);
+      canvas.addEventListener("pointercancel", releasePointer);
+      canvas.addEventListener("pointerleave", e => {
+        if (state.drag.on && state.drag.pointerId === e.pointerId) releasePointer(e);
+      });
+
+      nSlider.addEventListener("input", () => {
+        state.n = +nSlider.value;
+        stopPlay();
+        recompute();
+      });
+
+      kSlider.addEventListener("input", () => setK(+kSlider.value - 1));
+      prevBtn.addEventListener("click", () => setK(state.k - 1));
+      nextBtn.addEventListener("click", () => setK(state.k + 1));
+      snapBtn.addEventListener("click", resetCamera);
+      resetBtn.addEventListener("click", resetCamera);
+      playBtn.addEventListener("click", togglePlay);
+
+      fieldBtn.addEventListener("click", () => {
+        state.showField = !state.showField;
+        fieldBtn.classList.toggle("active", state.showField);
+        redraw();
+      });
+
+      chordBtn.addEventListener("click", () => {
+        state.showChords = !state.showChords;
+        chordBtn.classList.toggle("active", state.showChords);
+        redraw();
+      });
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) stopPlay();
+      });
+
+      window.addEventListener("keydown", e => {
+        if (e.key === "ArrowRight") setK(state.k + 1);
+        if (e.key === "ArrowLeft") setK(state.k - 1);
+      });
+
+      if ("ResizeObserver" in window) {
+        new ResizeObserver(() => fitCanvas()).observe(canvasWrap);
+      } else {
+        window.addEventListener("resize", fitCanvas);
+      }
+
+      compute();
+      updateZoomLabel();
+      updateRangeFill(nSlider);
+      updateRangeFill(kSlider);
+      syncPanel();
+      fitCanvas();
+    })();
+  </script>
+</body>
+
+</html>

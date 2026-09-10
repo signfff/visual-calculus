@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>映射与函数 · 可视化理解</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --brand: #3b82f6;
+      --brand-dim: rgba(59,130,246,0.08);
+      --good: #10b981;
+      --good-dim: rgba(16,185,129,0.08);
+      --warn: #f59e0b;
+      --warn-dim: rgba(245,158,11,0.08);
+      --purple: #8b5cf6;
+      --orange: #f97316;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    .page {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 10px;
+      padding: 10px 14px;
+      max-width: 1520px;
+      margin: 0 auto;
+    }
+
+    /* ── 顶栏 ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 12px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .topbar h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+
+    .topbar .sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .topbar-right {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .tag {
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .tag.active {
+      background: var(--brand-dim);
+      color: var(--brand);
+      border-color: rgba(59,130,246,0.2);
+    }
+
+    /* ── 主布局 ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 480px;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    /* ── 左侧 ── */
+    .left-col {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    .ctrl-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .ctrl-bar select {
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 600;
+      min-width: 170px;
+    }
+
+    .ctrl-bar .divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    .ctrl-bar label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .ctrl-bar button {
+      border: none;
+      border-radius: 9px;
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+
+    .ctrl-bar button:hover { transform: translateY(-1px); }
+
+    .btn-primary {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .btn-ghost {
+      background: var(--surface);
+      color: #475569;
+      border: 1px solid var(--border) !important;
+    }
+
+    .canvas-shell {
+      position: relative;
+      min-height: 0;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #fafbfc;
+    }
+
+    canvas { display: block; width: 100%; height: 100%; }
+
+    /* ── 右侧面板 ── */
+    .right-col {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 10px;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+
+    .card h3 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #0f172a;
+    }
+
+    /* ── 性质卡 ── */
+    .prop-strip {
+      display: grid;
+      grid-template-columns: repeat(4,1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .prop {
+      text-align: center;
+      padding: 10px 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      transition: all 0.2s;
+    }
+
+    .prop .icon {
+      font-size: 22px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .prop .name {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .prop.yes { background: var(--good-dim); border-color: rgba(16,185,129,0.2); }
+    .prop.yes .icon { color: var(--good); }
+    .prop.no  { background: #f8fafc; }
+    .prop.no  .icon { color: #cbd5e1; }
+
+    .msg {
+      padding: 8px 11px;
+      border-radius: 9px;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.45;
+      background: var(--warn-dim);
+      color: #b45309;
+      border: 1px solid rgba(245,158,11,0.15);
+    }
+
+    .msg.ok {
+      background: var(--good-dim);
+      color: #047857;
+      border-color: rgba(16,185,129,0.18);
+    }
+
+    .formula-line {
+      text-align: center;
+      padding: 6px 0 4px;
+      font-size: 14px;
+      border-top: 1px solid var(--border);
+      margin-top: 8px;
+      color: #475569;
+    }
+
+    /* ── 对比表 ── */
+    .cmp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    .cmp-table th {
+      padding: 6px 4px;
+      text-align: center;
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 700;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .cmp-table td {
+      padding: 7px 4px;
+      text-align: center;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .cmp-table tr.hi {
+      background: rgba(59,130,246,0.05);
+    }
+
+    .cmp-table tr.hi td:first-child {
+      font-weight: 700;
+      color: var(--brand);
+    }
+
+    .cmp-table .y { color: var(--good); font-weight: 800; font-size: 14px; }
+    .cmp-table .n { color: #d1d5db; font-size: 14px; }
+
+    /* ── 要点卡 ── */
+    .point-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .point {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .point .num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      color: #475569;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .point .body {
+      font-size: 11px;
+      color: #475569;
+      line-height: 1.55;
+    }
+
+    .point .body b { color: #1e293b; }
+
+    /* ── 响应式 ── */
+    @media (max-width: 1200px) {
+      body { overflow: auto; }
+      .page { height: auto; }
+      .main-grid { grid-template-columns: 1fr; }
+      .right-col { max-height: none; }
+      .canvas-shell { min-height: 400px; }
+    }
+
+    @media (max-width: 700px) {
+      .ctrl-bar { flex-wrap: wrap; }
+      .prop-strip { grid-template-columns: repeat(2,1fr); }
+      .topbar { flex-direction: column; align-items: flex-start; gap: 6px; }
+    }
+  </style>
+
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+    onerror="var s=document.createElement('script');s.src='https://lib.baomitu.com/mathjax/3.2.2/es5/tex-svg.js';s.defer=true;this.parentNode.insertBefore(s,this);">
+  </script>
+</head>
+
+<body>
+<div class="page">
+
+  <!-- ═══ 顶栏 ═══ -->
+  <header class="topbar">
+    <div>
+      <h1>映射与函数 · 可视化理解</h1>
+      <div class="sub">对比四种映射类型，直观理解单射、满射、双射及逆映射的存在条件</div>
+    </div>
+    <div class="topbar-right">
+      <span class="tag">X → Y</span>
+      <span class="tag active" id="topTag">单射 Injective</span>
+    </div>
+  </header>
+
+  <!-- ═══ 主体 ═══ -->
+  <div class="main-grid">
+
+    <!-- 左侧 -->
+    <div class="left-col">
+      <div class="ctrl-bar">
+        <select id="mapType">
+          <option value="general">一般映射</option>
+          <option value="injective" selected>单射 Injective</option>
+          <option value="surjective">满射 Surjective</option>
+          <option value="bijective">双射 Bijective</option>
+        </select>
+        <span class="divider"></span>
+        <label><input type="checkbox" id="showInverse"> 逆映射 f⁻¹</label>
+        <label><input type="checkbox" id="showLabels" checked> 标签</label>
+        <span class="divider"></span>
+        <button class="btn-primary" id="playBtn">▶ 播放动画</button>
+        <button class="btn-ghost" id="resetBtn">重置</button>
+        <span style="font-size:11px;color:#94a3b8;margin-left:4px;">← → 切换 　 空格 播放</span>
+      </div>
+
+      <div class="canvas-shell">
+        <canvas id="c"></canvas>
+      </div>
+    </div>
+
+    <!-- 右侧 -->
+    <div class="right-col">
+
+      <!-- 性质判断 -->
+      <div class="card">
+        <h3>📐 当前映射性质</h3>
+        <div class="prop-strip">
+          <div class="prop yes" id="pInj"><div class="icon">✓</div><div class="name">单射</div></div>
+          <div class="prop no"  id="pSur"><div class="icon">✗</div><div class="name">满射</div></div>
+          <div class="prop no"  id="pBij"><div class="icon">✗</div><div class="name">双射</div></div>
+          <div class="prop no"  id="pInv"><div class="icon">✗</div><div class="name">逆映射</div></div>
+        </div>
+        <div class="msg" id="msg">每个 X 映射到不同 Y（单射成立），但 y₅ 未被映射，故不是满射。</div>
+        <div class="formula-line">\(f:X\!\to\! Y,\ \forall x\!\in\!X,\exists!\,y\!\in\!Y,f(x)\!=\!y\)</div>
+      </div>
+
+      <!-- 对比表 -->
+      <div class="card">
+        <h3>📊 四种类型对比</h3>
+        <table class="cmp-table">
+          <thead>
+            <tr><th></th><th>单射</th><th>满射</th><th>双射</th><th>逆映射</th><th>直观特征</th></tr>
+          </thead>
+          <tbody>
+            <tr id="rGen"><td>一般</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td><td>多对一 + 有遗漏</td></tr>
+            <tr id="rInj" class="hi"><td>单射</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td><td>一对一，未全覆盖</td></tr>
+            <tr id="rSur"><td>满射</td><td class="n">✗</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td><td>全覆盖，有多对一</td></tr>
+            <tr id="rBij"><td>双射</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td>完美一一对应</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 核心要点 -->
+      <div class="card">
+        <h3>💡 核心要点</h3>
+        <div class="point-list">
+          <div class="point">
+            <div class="num">1</div>
+            <div class="body"><b>映射的定义</b>：\(f:X\to Y\)，X 中每个元素在 Y 中有<b>唯一</b>对应。三要素：定义域、值域、对应法则。</div>
+          </div>
+          <div class="point">
+            <div class="num">2</div>
+            <div class="body"><b>单射</b>：\(x_1\!\neq\!x_2\Rightarrow f(x_1)\!\neq\!f(x_2)\)。不同输入不同输出，每个 Y <b>最多</b>被一个 X 指向。</div>
+          </div>
+          <div class="point">
+            <div class="num">3</div>
+            <div class="body"><b>满射</b>：\(\forall y\!\in\!Y,\exists x\!\in\!X,f(x)\!=\!y\)。值域充满整个 Y，每个 Y <b>至少</b>被一个 X 指向。</div>
+          </div>
+          <div class="point">
+            <div class="num">4</div>
+            <div class="body"><b>双射 ⇔ 可逆</b>：同时满足单射和满射时，逆映射 \(f^{-1}\) 存在，构成完美<b>"往返通道"</b>。</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+// DOM refs
+const $ = id => document.getElementById(id);
+const mapSel = $('mapType');
+const chkInv = $('showInverse');
+const chkLab = $('showLabels');
+const playBtn = $('playBtn');
+const resetBtn = $('resetBtn');
+const topTag = $('topTag');
+const msg = $('msg');
+const pInj = $('pInj'), pSur = $('pSur'), pBij = $('pBij'), pInv = $('pInv');
+const rGen = $('rGen'), rInj = $('rInj'), rSur = $('rSur'), rBij = $('rBij');
+
+// ── 数据 ──
+const X = [
+  { id:'x₁', rx:0.18, ry:0.28 },
+  { id:'x₂', rx:0.18, ry:0.44 },
+  { id:'x₃', rx:0.18, ry:0.60 },
+  { id:'x₄', rx:0.18, ry:0.76 },
+];
+const Y = [
+  { id:'y₁', rx:0.82, ry:0.18 },
+  { id:'y₂', rx:0.82, ry:0.34 },
+  { id:'y₃', rx:0.82, ry:0.50 },
+  { id:'y₄', rx:0.82, ry:0.66 },
+  { id:'y₅', rx:0.82, ry:0.82 },
+];
+
+const CFG = {
+  general: {
+    pairs: [[0,0],[1,0],[2,2],[3,3]], yN:5,
+    inj:false, sur:false, bij:false,
+    name:'一般映射', en:'General',
+    desc:'既非单射也非满射。x₁ 和 x₂ 都映射到 y₁（违反单射），y₂ 和 y₅ 无原像（违反满射）。'
+  },
+  injective: {
+    pairs: [[0,0],[1,1],[2,2],[3,3]], yN:5,
+    inj:true, sur:false, bij:false,
+    name:'单射', en:'Injective',
+    desc:'每个 X 映射到不同 Y（单射 ✓），但 y₅ 未被映射，故不是满射。逆映射不存在。'
+  },
+  surjective: {
+    pairs: [[0,0],[1,0],[2,1],[3,2]], yN:3,
+    inj:false, sur:true, bij:false,
+    name:'满射', en:'Surjective',
+    desc:'所有 Y 元素（此处 3 个）都被映射到（满射 ✓），但 x₁ 和 x₂ 共同指向 y₁，故非单射。'
+  },
+  bijective: {
+    pairs: [[0,0],[1,1],[2,2],[3,3]], yN:4,
+    inj:true, sur:true, bij:true,
+    name:'双射', en:'Bijective',
+    desc:'既是单射又是满射。4 个 X 与 4 个 Y 一一对应，逆映射 f⁻¹ 存在，可完美往返。'
+  }
+};
+
+const S = {
+  type: 'injective',
+  showInv: false,
+  showLab: true,
+  playing: false,
+  prog: 0,
+  timer: null,
+};
+
+// ── 画布工具（DPR 感知）──
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.max(600, Math.round(rect.width));
+  const h = Math.max(300, Math.round(rect.height));
+  if (canvas.width !== w * DPR || canvas.height !== h * DPR) {
+    canvas.width = w * DPR;
+    canvas.height = h * DPR;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+  }
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+
+function cx(rx) { return rx * canvas.width / DPR; }
+function cy(ry) { return ry * canvas.height / DPR; }
+
+// ── 绘制 ──
+function ellipse(rx, ry, rrx, rry, col, dash) {
+  ctx.save();
+  ctx.fillStyle = col + '0a';
+  ctx.beginPath();
+  ctx.ellipse(cx(rx), cy(ry), rrx * canvas.width/DPR, rry * canvas.height/DPR, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = col + '70';
+  ctx.lineWidth = 2.5;
+  if (dash) ctx.setLineDash([8,5]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function dot(rx, ry, label, col, hi, ghost) {
+  const xx = cx(rx), yy = cy(ry);
+  const r = Math.min(canvas.width, canvas.height) / DPR * 0.028;
+
+  ctx.save();
+
+  if (ghost) {
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = '#94a3b8';
+    ctx.beginPath(); ctx.arc(xx, yy, r, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+    if (S.showLab) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '600 11px "JetBrains Mono","Consolas",sans-serif';
+      ctx.textAlign = 'center'; ctx.fillText(label, xx, yy - r - 7);
+    }
+    ctx.restore();
+    return;
+  }
+
+  if (hi) {
+    ctx.fillStyle = col + '20';
+    ctx.beginPath(); ctx.arc(xx, yy, r*2.2, 0, Math.PI*2); ctx.fill();
+  }
+
+  const g = ctx.createRadialGradient(xx-r*0.3, yy-r*0.3, r*0.05, xx, yy, r);
+  g.addColorStop(0,'#ffffff'); g.addColorStop(0.4, col); g.addColorStop(1, col);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(xx, yy, r, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  if (S.showLab) {
+    ctx.fillStyle = col;
+    ctx.font = '600 12px "JetBrains Mono","Consolas",sans-serif';
+    ctx.textAlign = 'center'; ctx.fillText(label, xx, yy - r - 7);
+  }
+
+  ctx.restore();
+}
+
+function arrow(x1, y1, x2, y2, col, alpha, dash) {
+  const xx1=cx(x1), yy1=cy(y1), xx2=cx(x2), yy2=cy(y2);
+  const scale = Math.min(canvas.width, canvas.height) / DPR;
+  const r = scale * 0.028;
+  const dx=xx2-xx1, dy=yy2-yy1;
+  const dist = Math.hypot(dx,dy);
+  if (dist<3) return;
+  const ux=dx/dist, uy=dy/dist;
+  const sx=xx1+ux*r, sy=yy1+uy*r;
+  const ex=xx2-ux*r, ey=yy2-uy*r;
+  const mx=(sx+ex)/2, my=(sy+ey)/2;
+  const curve = dash ? -38 : 38;
+  const cpx=mx, cpy=my - curve*(Math.abs(dy)/dist+0.4);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = col;
+  ctx.lineWidth = dash ? 2 : 2.8;
+  ctx.lineCap = 'round';
+  if (dash) ctx.setLineDash([6,4]);
+
+  ctx.beginPath();
+  ctx.moveTo(sx,sy);
+  ctx.quadraticCurveTo(cpx,cpy,ex,ey);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // tip
+  const t1=0.92, t2=0.97;
+  const b1=(1-t1)*(1-t1), b2=2*(1-t1)*t1, b3=t1*t1;
+  const bx=b1*sx+b2*cpx+b3*ex, by=b1*sy+b2*cpy+b3*ey;
+  const c1=(1-t2)*(1-t2), c2=2*(1-t2)*t2, c3=t2*t2;
+  const ax=c1*sx+c2*cpx+c3*ex, ay=c1*sy+c2*cpy+c3*ey;
+  const ang = Math.atan2(ay-by, ax-bx);
+  const h = dash ? 9 : 12;
+
+  ctx.fillStyle = col;
+  ctx.beginPath();
+  ctx.moveTo(ax,ay);
+  ctx.lineTo(ax-h*Math.cos(ang-Math.PI/7), ay-h*Math.sin(ang-Math.PI/7));
+  ctx.lineTo(ax-h*Math.cos(ang+Math.PI/7), ay-h*Math.sin(ang+Math.PI/7));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function render() {
+  const w = canvas.width / DPR, h = canvas.height / DPR;
+  ctx.clearRect(0,0,w,h);
+
+  const cfg = CFG[S.type];
+
+  // 集合椭圆
+  ellipse(0.18, 0.52, 0.16, 0.38, '#3b82f6', true);
+  ellipse(0.82, 0.50, 0.16, 0.40, '#10b981', true);
+
+  // 集合标签
+  ctx.fillStyle = '#3b82f6'; ctx.font = 'bold 20px "PingFang SC","Microsoft YaHei",sans-serif'; ctx.textAlign='center';
+  ctx.fillText('X', cx(0.18), cy(0.08));
+  ctx.fillStyle = '#64748b'; ctx.font = '12px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText('定义域 Domain', cx(0.18), cy(0.12));
+
+  ctx.fillStyle = '#10b981'; ctx.font = 'bold 20px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText('Y', cx(0.82), cy(0.06));
+  ctx.fillStyle = '#64748b'; ctx.font = '12px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText('值域 Codomain', cx(0.82), cy(0.10));
+
+  // Y 元素
+  const hitY = new Set(cfg.pairs.map(p=>p[1]));
+  for (let i=0; i<Y.length; i++) {
+    if (i < cfg.yN) dot(Y[i].rx, Y[i].ry, Y[i].id, '#10b981', hitY.has(i), false);
+    else dot(Y[i].rx, Y[i].ry, Y[i].id, '#10b981', false, true);
+  }
+
+  // X 元素
+  X.forEach(el => dot(el.rx, el.ry, el.id, '#3b82f6', true, false));
+
+  // 映射箭头
+  cfg.pairs.forEach(([xi,yi],idx)=>{
+    const a = S.playing ? Math.min(1, S.prog*cfg.pairs.length - idx + 0.3) : 0.75;
+    arrow(X[xi].rx, X[xi].ry, Y[yi].rx, Y[yi].ry, '#8b5cf6', Math.max(0.15, Math.min(1,a)), false);
+  });
+
+  // 逆映射
+  if (S.showInv && cfg.bij) {
+    cfg.pairs.forEach(([xi,yi])=>{
+      arrow(Y[yi].rx, Y[yi].ry, X[xi].rx, X[xi].ry, '#f97316', 0.55, true);
+    });
+  }
+
+  // 左上角信息
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  const bx=12, by=12, bw=300, bh=68;
+  ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,12); ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.06)'; ctx.lineWidth=1; ctx.stroke();
+
+  ctx.fillStyle='#0f172a'; ctx.font='bold 17px "PingFang SC","Microsoft YaHei",sans-serif'; ctx.textAlign='left';
+  ctx.fillText(cfg.name + '  (' + cfg.en + ')', bx+16, by+26);
+  ctx.fillStyle='#64748b'; ctx.font='12px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText('|X| = 4    |Y| = ' + cfg.yN + '    映射 ' + cfg.pairs.length + ' 条', bx+16, by+48);
+
+  // 底部图例
+  const ly = h - 30, lx = 12;
+  ctx.fillStyle='rgba(255,255,255,0.85)';
+  ctx.beginPath(); ctx.roundRect(lx,ly-4, 420, 26, 10); ctx.fill();
+
+  const leg = [['#3b82f6','X 元素'],['#10b981','Y（已命中）'],['#94a3b8','Y（未命中）'],['#8b5cf6','映射 f'],['#f97316','逆映射 f⁻¹']];
+  let px = lx+12;
+  ctx.font = '10px "PingFang SC","Microsoft YaHei",sans-serif';
+  leg.forEach(([c,t])=>{
+    ctx.fillStyle=c; ctx.beginPath(); ctx.arc(px,ly+8,4.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#475569'; ctx.textAlign='left'; ctx.fillText(t,px+8,ly+12);
+    px += ctx.measureText(t).width + 24;
+  });
+}
+
+// ── 面板 ──
+function setProp(el, ok) {
+  el.classList.toggle('yes', ok);
+  el.classList.toggle('no', !ok);
+  el.querySelector('.icon').textContent = ok ? '✓' : '✗';
+}
+
+function updatePanel() {
+  const c = CFG[S.type];
+  setProp(pInj, c.inj); setProp(pSur, c.sur); setProp(pBij, c.bij); setProp(pInv, c.bij);
+  msg.textContent = c.desc;
+  msg.classList.toggle('ok', c.bij);
+  topTag.textContent = c.name + ' ' + c.en;
+
+  [rGen,rInj,rSur,rBij].forEach(r=>r.classList.remove('hi'));
+  ({general:rGen, injective:rInj, surjective:rSur, bijective:rBij}[S.type]).classList.add('hi');
+
+  if (!c.bij && S.showInv) { chkInv.checked=false; S.showInv=false; }
+  chkInv.disabled = !c.bij;
+  chkInv.parentElement.style.opacity = c.bij ? '1' : '0.35';
+}
+
+// ── 动画 ──
+function startAnim() {
+  if (S.timer) return;
+  S.playing = true; S.prog = 0;
+  playBtn.textContent = '⏸ 暂停';
+  const t0 = performance.now();
+  const DUR = 2000;
+  (function tick(now) {
+    S.prog = Math.min(1, (now-t0)/DUR);
+    render();
+    if (S.prog<1 && S.playing) { S.timer = requestAnimationFrame(tick); }
+    else { S.playing=false; S.timer=null; S.prog=0; playBtn.textContent='▶ 播放动画'; render(); }
+  })(t0);
+}
+
+function stopAnim() {
+  S.playing = false;
+  if (S.timer) { cancelAnimationFrame(S.timer); S.timer=null; }
+  S.prog = 0;
+  playBtn.textContent = '▶ 播放动画';
+  render();
+}
+
+// ── 事件 ──
+mapSel.addEventListener('change', ()=>{
+  S.type = mapSel.value;
+  S.showInv = false; chkInv.checked = false;
+  stopAnim(); updatePanel(); render();
+});
+
+chkInv.addEventListener('change', ()=>{ S.showInv=chkInv.checked; render(); });
+chkLab.addEventListener('change', ()=>{ S.showLab=chkLab.checked; render(); });
+
+playBtn.addEventListener('click', ()=>{ if(S.playing) stopAnim(); else startAnim(); });
+resetBtn.addEventListener('click', ()=>{ stopAnim(); S.showInv=false; chkInv.checked=false; render(); });
+
+window.addEventListener('resize', ()=>{ resize(); render(); });
+
+window.addEventListener('keydown', e=>{
+  const types = ['general','injective','surjective','bijective'];
+  const i = types.indexOf(S.type);
+  if (e.key==='ArrowRight'||e.key==='ArrowUp') {
+    e.preventDefault();
+    S.type = types[(i+1)%4]; mapSel.value = S.type;
+    S.showInv=false; chkInv.checked=false;
+    stopAnim(); updatePanel(); render();
+  } else if (e.key==='ArrowLeft'||e.key==='ArrowDown') {
+    e.preventDefault();
+    S.type = types[(i-1+4)%4]; mapSel.value = S.type;
+    S.showInv=false; chkInv.checked=false;
+    stopAnim(); updatePanel(); render();
+  } else if (e.key===' ') {
+    e.preventDefault();
+    if (S.playing) stopAnim(); else startAnim();
+  }
+});
+
+// ── 启动 ──
+resize(); updatePanel(); render();
+
+// MathJax
+(function waitMJ(){
+  if (window.MathJax && MathJax.typesetPromise) { MathJax.typesetPromise().catch(()=>{}); }
+  else { setTimeout(waitMJ, 200); }
+})();
+</script>
+</body>
+</html>

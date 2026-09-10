@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>心形曲面海报</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #171c4b;
+            font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+        }
+
+        body {
+            position: relative;
+        }
+
+        .stage {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #171c4b;
+        }
+
+        .poster {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background: #171c4b;
+            overflow: hidden;
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+        }
+
+        .title-wrap {
+            position: absolute;
+            top: 34px;
+            right: 26px;
+            display: flex;
+            flex-direction: row-reverse;
+            gap: 12px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            color: rgba(255, 255, 255, 0.96);
+            letter-spacing: 0.08em;
+            z-index: 3;
+            user-select: none;
+        }
+
+        .title-main {
+            font-size: clamp(34px, 5vw, 68px);
+            line-height: 0.95;
+            font-weight: 300;
+        }
+
+        .title-sub {
+            font-size: clamp(14px, 1.8vw, 24px);
+            line-height: 1.2;
+            font-weight: 300;
+            opacity: 0.92;
+        }
+
+        #heartCanvas {
+            position: absolute;
+            left: 50%;
+            top: 45%;
+            width: min(86vw, 980px);
+            height: min(76vh, 900px);
+            transform: translate(-52%, -43%);
+            display: block;
+        }
+
+        .formula {
+            position: absolute;
+            left: 22px;
+            bottom: 18px;
+            z-index: 4;
+            color: rgba(255, 255, 255, 0.94);
+            font-family: "Times New Roman", "Cambria Math", serif;
+            font-size: clamp(12px, 1.2vw, 19px);
+            line-height: 1.65;
+            background: #171c4b;
+            padding: 6px 8px 6px 14px;
+        }
+
+        .formula::before {
+            content: "⎧\A⎪\A⎩";
+            white-space: pre;
+            position: absolute;
+            left: -16px;
+            top: 0.15em;
+            line-height: 1.12;
+            font-size: 1.35em;
+            opacity: 0.95;
+        }
+
+        .formula-line {
+            white-space: nowrap;
+        }
+
+        .domain {
+            margin-left: 8px;
+            opacity: 0.86;
+        }
+
+        @media (max-width: 700px) {
+            .title-wrap {
+                right: 14px;
+                top: 18px;
+                gap: 8px;
+            }
+
+            #heartCanvas {
+                width: 96vw;
+                height: 72vh;
+                top: 43%;
+                transform: translate(-52%, -41%);
+            }
+
+            .formula {
+                left: 16px;
+                bottom: 12px;
+                padding: 4px 6px 4px 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="stage">
+        <div class="poster" id="poster" title="拖动旋转，双击复位">
+            <canvas id="heartCanvas" aria-label="心形曲面"></canvas>
+
+            <div class="title-wrap">
+                <div class="title-main">心形曲面</div>
+                <div class="title-sub">数学美学</div>
+            </div>
+
+            <div class="formula">
+                <div class="formula-line">x = cos u · (2 cos v − cos 2v)</div>
+                <div class="formula-line">y = sin u · (2 cos v − cos 2v)</div>
+                <div class="formula-line">
+                    z = 2 sin v − sin 2v
+                    <span class="domain">(u, v ∈ [0, 2π))</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("heartCanvas");
+        const poster = document.getElementById("poster");
+        const ctx = canvas.getContext("2d");
+
+        const state = {
+            rotX: -0.55,
+            rotY: 0.94,
+            pointerId: null,
+            dragging: false,
+            lastX: 0,
+            lastY: 0
+        };
+
+        function resizeCanvasForDisplay() {
+            const rect = canvas.getBoundingClientRect();
+            const ratio = window.devicePixelRatio || 1;
+
+            canvas.width = Math.round(rect.width * ratio);
+            canvas.height = Math.round(rect.height * ratio);
+
+            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            draw();
+        }
+
+        function project(x, y, z) {
+            const yaw = state.rotY;
+            const pitch = state.rotX;
+
+            const x1 = x * Math.cos(yaw) + y * Math.sin(yaw);
+            const y1 = -x * Math.sin(yaw) + y * Math.cos(yaw);
+            const z1 = z;
+
+            const y2 = y1 * Math.cos(pitch) - z1 * Math.sin(pitch);
+            const z2 = y1 * Math.sin(pitch) + z1 * Math.cos(pitch);
+
+            const perspective = 1 / (1 + (z2 + 3.8) * 0.11);
+
+            return {
+                x: x1 * perspective,
+                y: y2 * perspective,
+                z: z2
+            };
+        }
+
+        function heartPoint(u, v) {
+            return {
+                x: Math.cos(u) * (2 * Math.cos(v) - Math.cos(2 * v)),
+                y: Math.sin(u) * (2 * Math.cos(v) - Math.cos(2 * v)),
+                z: 2 * Math.sin(v) - Math.sin(2 * v)
+            };
+        }
+
+        function drawCurve(points, color, lineWidth) {
+            if (!points.length) return;
+
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+        }
+
+        function draw() {
+            const w = canvas.getBoundingClientRect().width;
+            const h = canvas.getBoundingClientRect().height;
+
+            ctx.clearRect(0, 0, w, h);
+            ctx.save();
+
+            ctx.translate(w * 0.5, h * 0.56);
+
+            const scale = Math.min(w, h) * 0.18;
+
+            const mainColors = [
+                "rgba(240,245,255,0.82)",
+                "rgba(198,233,255,0.72)",
+                "rgba(255,239,176,0.62)",
+                "rgba(255,190,214,0.55)",
+                "rgba(214,205,255,0.60)",
+                "rgba(197,246,243,0.62)"
+            ];
+
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+
+            for (let i = 0; i < 18; i++) {
+                const v = (i / 18) * Math.PI * 2;
+                const pts = [];
+
+                for (let j = 0; j <= 220; j++) {
+                    const u = (j / 220) * Math.PI * 2;
+                    const p = heartPoint(u, v);
+                    const q = project(p.x, p.y, p.z);
+                    pts.push({
+                        x: q.x * scale,
+                        y: q.y * scale
+                    });
+                }
+
+                drawCurve(pts, "rgba(255,255,255,0.22)", 0.8);
+            }
+
+            for (let i = 0; i < 36; i++) {
+                const u = (i / 36) * Math.PI * 2;
+                const pts = [];
+
+                for (let j = 0; j <= 220; j++) {
+                    const v = (j / 220) * Math.PI * 2;
+                    const p = heartPoint(u, v);
+                    const q = project(p.x, p.y, p.z);
+                    pts.push({
+                        x: q.x * scale,
+                        y: q.y * scale
+                    });
+                }
+
+                drawCurve(pts, mainColors[i % mainColors.length], 1.1);
+            }
+
+            ctx.restore();
+        }
+
+        poster.addEventListener("pointerdown", (event) => {
+            state.pointerId = event.pointerId;
+            state.dragging = true;
+            state.lastX = event.clientX;
+            state.lastY = event.clientY;
+            poster.style.cursor = "grabbing";
+            poster.setPointerCapture(event.pointerId);
+        });
+
+        poster.addEventListener("pointermove", (event) => {
+            if (!state.dragging || event.pointerId !== state.pointerId) return;
+
+            const dx = event.clientX - state.lastX;
+            const dy = event.clientY - state.lastY;
+
+            state.lastX = event.clientX;
+            state.lastY = event.clientY;
+
+            state.rotY += dx * 0.008;
+            state.rotX += dy * 0.008;
+
+            draw();
+        });
+
+        function endDrag(event) {
+            if (event.pointerId !== state.pointerId) return;
+            state.dragging = false;
+            state.pointerId = null;
+            poster.style.cursor = "grab";
+        }
+
+        poster.addEventListener("pointerup", endDrag);
+        poster.addEventListener("pointercancel", endDrag);
+
+        poster.addEventListener("dblclick", () => {
+            state.rotX = -0.55;
+            state.rotY = 0.94;
+            draw();
+        });
+
+        window.addEventListener("resize", resizeCanvasForDisplay);
+        resizeCanvasForDisplay();
+    </script>
+</body>
+
+</html>

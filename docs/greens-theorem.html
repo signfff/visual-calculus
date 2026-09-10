@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>格林公式可视化课堂页</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: rgba(255, 255, 255, 0.95);
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-soft: rgba(37, 99, 235, 0.12);
+      --border: rgba(15, 23, 42, 0.12);
+      --shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+      --good: #801515;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 30%),
+        radial-gradient(circle at left center, rgba(15, 118, 110, 0.08), transparent 28%),
+        var(--bg);
+      line-height: 1.4;
+      overflow: hidden;
+    }
+
+    .page {
+      width: min(1480px, 100vw);
+      height: 100vh;
+      margin: 0 auto;
+      padding: 10px 14px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 10px;
+    }
+
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .topbar {
+      display: block;
+      padding: 10px 16px;
+      min-height: 0;
+    }
+
+    .topbar-main h1 {
+      margin: 0;
+      font-size: clamp(20px, 2vw, 27px);
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .main-grid {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1.42fr) minmax(360px, 0.88fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .visual-card {
+      min-height: 0;
+      padding: 10px;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin: 0;
+      min-width: 0;
+    }
+
+    .control {
+      min-width: 0;
+      background: rgba(248, 250, 252, 0.96);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 7px 9px;
+      min-height: 58px;
+      overflow: hidden;
+    }
+
+    .control label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      margin: 0 0 4px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .control select,
+    .control input[type="range"] {
+      width: 100%;
+    }
+
+    .control select {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 6px 8px;
+      background: white;
+      font-size: 12px;
+      color: var(--text);
+      min-width: 0;
+    }
+
+    .control .toggle-row,
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .toggle-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin: 0;
+      font-size: 12px;
+      color: var(--text);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .control-note {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 5px 12px rgba(15, 23, 42, 0.08);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, var(--primary), #1d4ed8);
+      color: white;
+    }
+
+    button.secondary {
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    button.success {
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: white;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.96));
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #mainCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .legend {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      padding: 7px 9px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      color: var(--muted);
+    }
+
+    .legend-bar {
+      width: 92px;
+      height: 9px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(59, 130, 246, 0.85), rgba(255, 255, 255, 0.96), rgba(239, 68, 68, 0.85));
+      border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .side-panel {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 0.88fr) minmax(0, 1.12fr);
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .metrics-card,
+    .mini-card {
+      min-height: 0;
+      overflow: hidden;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section-title {
+      flex: 0 0 auto;
+      margin: 0 0 7px;
+      font-size: 16px;
+      line-height: 1.2;
+      font-weight: 800;
+    }
+
+    .formula-mini {
+      flex: 0 0 auto;
+      font-size: 14px;
+      text-align: center;
+      padding: 8px 9px;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.07), rgba(15, 118, 110, 0.06));
+      border: 1px solid rgba(37, 99, 235, 0.14);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    .metrics {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 4px 8px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(248, 250, 252, 0.96);
+      overflow: hidden;
+    }
+
+    .metric .label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .metric .value {
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .metric .hint {
+      margin-top: 3px;
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.25;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .status {
+      flex: 0 0 auto;
+      margin-top: 7px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(21, 128, 61, 0.08);
+      color: var(--good);
+      border: 1px solid rgba(21, 128, 61, 0.16);
+      font-weight: 700;
+      font-size: 12px;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .mini-card>p {
+      flex: 0 0 auto;
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .mini-canvas-wrap {
+      flex: 1 1 auto;
+      min-height: 120px;
+      margin: 4px 0;
+      padding: 4px;
+      background: rgba(248, 250, 252, 0.98);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #miniCanvas {
+      width: 100%;
+      max-width: 360px;
+      height: auto;
+      aspect-ratio: 18 / 11;
+      flex: 0 1 auto;
+    }
+
+    .mini-card ul {
+      flex: 0 0 auto;
+      margin: 0 0 0 16px;
+      padding: 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .mini-card li {
+      margin-bottom: 3px;
+    }
+
+
+    /* ===== 布局兼容性修复：防止右侧“实时数值对照” hint 被裁切 =====
+       原因：右侧面板在桌面端被固定在 100vh 内，metrics-card/metric 同时使用 overflow:hidden；
+       当另一台电脑的浏览器缩放、系统字体或 MathJax 渲染高度略有差异时，hint 会被截断。
+    */
+    @media (min-width: 1251px) {
+      .side-panel {
+        grid-template-rows: minmax(0, 1.08fr) minmax(0, 0.92fr);
+      }
+
+      .metrics-card {
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+      }
+
+      .metrics {
+        grid-auto-rows: minmax(76px, auto);
+        align-content: start;
+      }
+
+      .metric {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        min-height: 76px;
+        overflow: visible;
+      }
+
+      .metric .hint {
+        display: block;
+        -webkit-line-clamp: unset;
+        overflow: visible;
+        min-height: 2.5em;
+      }
+
+      .metric.full-width {
+        min-height: 86px;
+      }
+    }
+
+    @media (max-height: 900px) and (min-width: 1251px) {
+      .metrics {
+        gap: 5px;
+        grid-auto-rows: minmax(66px, auto);
+      }
+
+      .metric {
+        min-height: 66px;
+        padding: 5px 8px;
+      }
+
+      .metric .value {
+        font-size: 16px;
+      }
+
+      .metric .hint {
+        font-size: 10px;
+        line-height: 1.2;
+        min-height: 2.4em;
+      }
+
+      .metric.full-width {
+        min-height: 78px;
+      }
+    }
+
+    @media (max-height: 820px) and (min-width: 1251px) {
+      .metric .hint {
+        display: none;
+      }
+
+      .metric,
+      .metric.full-width {
+        min-height: 0;
+      }
+    }
+
+    @media (max-height: 820px) and (min-width: 1251px) {
+      .page {
+        padding: 8px 12px;
+        gap: 8px;
+      }
+
+      .topbar {
+        padding: 8px 14px;
+      }
+
+      .topbar-main h1 {
+        font-size: 22px;
+      }
+
+      .control {
+        min-height: 52px;
+        padding: 6px 8px;
+      }
+
+      .control-note {
+        font-size: 11px;
+        line-height: 1.25;
+      }
+
+      .metrics-card,
+      .mini-card {
+        padding: 8px;
+      }
+
+      .formula-mini {
+        font-size: 13px;
+        padding: 7px;
+      }
+
+      .metric {
+        padding: 7px 8px;
+      }
+
+      .metric .hint {
+        display: none;
+      }
+
+      .status {
+        font-size: 11px;
+        -webkit-line-clamp: 1;
+      }
+
+      .mini-card>p {
+        -webkit-line-clamp: 2;
+      }
+
+      .mini-card ul {
+        font-size: 10.5px;
+      }
+    }
+
+    @media (max-width: 1250px) {
+      body {
+        overflow: auto;
+      }
+
+      .page {
+        height: auto;
+        min-height: 100vh;
+      }
+
+      .topbar-main p {
+        white-space: normal;
+      }
+
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .side-panel {
+        grid-template-rows: auto auto;
+      }
+
+      .controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .canvas-wrap {
+        min-height: 430px;
+      }
+
+      .metrics-card,
+      .mini-card {
+        overflow: visible;
+      }
+    }
+
+    @media (max-width: 800px) {
+      .page {
+        padding: 10px;
+      }
+
+      .controls,
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+
+      .canvas-wrap {
+        min-height: 360px;
+      }
+
+    }
+  </style>
+
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+
+<body>
+  <div class="page">
+    <header class="topbar card">
+      <div class="topbar-main">
+        <h1>格林公式可视化理解</h1>
+      </div>
+    </header>
+
+    <section class="main-grid">
+      <div class="visual-card card">
+        <div class="controls">
+          <div class="control">
+            <label for="shapeSelect">区域形状 D</label>
+            <select id="shapeSelect">
+              <option value="circle">圆域</option>
+              <option value="ellipse">椭圆域</option>
+              <option value="wavy">波浪边界域</option>
+            </select>
+          </div>
+
+          <div class="control">
+            <label for="fieldSelect">向量场 F = (P, Q)</label>
+            <select id="fieldSelect">
+              <option value="rotation">旋转场 F = (-0.6y, 0.6x)</option>
+              <option value="mixed">混合场 F = (-0.18y + 0.04xy, 0.45x + 0.03x²)</option>
+              <option value="shear">剪切场 F = (0.8y, 0)</option>
+              <option value="source">源场 F = (0.5x, 0.5y)</option>
+            </select>
+          </div>
+
+          <div class="control">
+            <label for="densityRange">采样精度：<span id="densityLabel">26</span></label>
+            <input id="densityRange" type="range" min="14" max="42" step="2" value="26" />
+          </div>
+
+          <div class="control">
+            <label for="speedRange">动画速度：<span id="speedLabel">1.0×</span></label>
+            <input id="speedRange" type="range" min="0.4" max="2.4" step="0.1" value="1.0" />
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="control">
+            <label>显示开关</label>
+            <div class="toggle-row">
+              <label><input type="checkbox" id="showArrows" checked /> 向量场</label>
+              <label><input type="checkbox" id="showHeat" checked /> 旋度热图</label>
+              <label><input type="checkbox" id="showGrid" checked /> 网格坐标</label>
+            </div>
+          </div>
+
+          <div class="control">
+            <label>动画控制</label>
+            <div class="button-row">
+              <button id="playBtn" class="primary">暂停动画</button>
+              <button id="resetBtn" class="secondary">重置位置</button>
+              <button id="demoBtn" class="success">课堂模式</button>
+            </div>
+          </div>
+
+          <div class="control">
+            <label>图例提示</label>
+            <div class="control-note">
+              绿色箭头：边界切向方向<br />
+              紫色箭头：向量场 \(\mathbf F(x,y)\)<br />
+              橙色文字：局部贡献 \(\mathbf F\cdot \mathbf T\)
+            </div>
+          </div>
+
+          <div class="control">
+            <label>讲解关键词</label>
+            <div class="control-note">
+              正向边界、环流、旋度、微元分割、内部抵消、边界剩余
+            </div>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="mainCanvas"></canvas>
+          <div class="legend">
+            <span>负旋度</span>
+            <div class="legend-bar"></div>
+            <span>正旋度</span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="side-panel">
+        <div class="metrics-card card">
+          <h2 class="section-title">实时数值对照</h2>
+          <div class="formula-mini">\(\displaystyle \oint_C P\,dx + Q\,dy \;=\; \iint_D \left(\frac{\partial Q}{\partial
+            x}-\frac{\partial P}{\partial y}\right)\,dA\)</div>
+          <div class="metrics">
+            <div class="metric">
+              <div class="label">线积分近似值</div>
+              <div class="value" id="lineIntegralValue">0.0000</div>
+              <div class="hint">沿边界 \(C\) 累加 \(P\,dx + Q\,dy\)</div>
+            </div>
+            <div class="metric">
+              <div class="label">二重积分近似值</div>
+              <div class="value" id="areaIntegralValue">0.0000</div>
+              <div class="hint">对区域 \(D\) 累加旋度 \(\frac{\partial Q}{\partial x}-\frac{\partial P}{\partial y}\)</div>
+            </div>
+            <div class="metric">
+              <div class="label">绝对误差</div>
+              <div class="value" id="errorValue">0.0000</div>
+              <div class="hint">采样越密，误差一般越小</div>
+            </div>
+            <div class="metric">
+              <div class="label">当前局部贡献 \(\mathbf F\cdot\mathbf T\)</div>
+              <div class="value" id="localContributionValue">0.0000</div>
+              <div class="hint">边界上该点对线积分的即时影响</div>
+            </div>
+            <div class="metric full-width">
+              <div class="label">当前向量场说明</div>
+              <div class="value" id="fieldFormula" style="font-size:17px; line-height:1.45;">\(\mathbf
+                F=(-0.6y,\,0.6x)\)</div>
+              <div class="hint" id="curlFormula">\(\operatorname{curl}\mathbf F=\frac{\partial Q}{\partial
+                x}-\frac{\partial P}{\partial y}=1.2\)</div>
+            </div>
+          </div>
+          <div class="status" id="statusText">观察：线积分与区域旋度积分正在数值对照。</div>
+        </div>
+
+        <div class="mini-card card">
+          <h2 class="section-title">为什么会相等？</h2>
+          <p>
+            将区域 \(D\) 划分成很多微小子区域，每个子区域边界都会产生一个微小环流。
+            相邻子区域的公共边方向相反，所以它们的贡献相互抵消，最终只保留下最外层边界 \(C\) 的总环流。
+          </p>
+          <div class="mini-canvas-wrap">
+            <canvas id="miniCanvas"></canvas>
+          </div>
+          <ul>
+            <li>内部公共边方向相反，贡献互相抵消。</li>
+            <li>外侧边界无法抵消，最终保留下来。</li>
+            <li>微元环流密度的极限就是旋度。</li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    const miniCanvas = document.getElementById('miniCanvas');
+    const mctx = miniCanvas.getContext('2d');
+
+    const shapeSelect = document.getElementById('shapeSelect');
+    const fieldSelect = document.getElementById('fieldSelect');
+    const densityRange = document.getElementById('densityRange');
+    const speedRange = document.getElementById('speedRange');
+    const densityLabel = document.getElementById('densityLabel');
+    const speedLabel = document.getElementById('speedLabel');
+    const showArrows = document.getElementById('showArrows');
+    const showHeat = document.getElementById('showHeat');
+    const showGrid = document.getElementById('showGrid');
+    const playBtn = document.getElementById('playBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const demoBtn = document.getElementById('demoBtn');
+
+    const lineIntegralValue = document.getElementById('lineIntegralValue');
+    const areaIntegralValue = document.getElementById('areaIntegralValue');
+    const errorValue = document.getElementById('errorValue');
+    const localContributionValue = document.getElementById('localContributionValue');
+    const fieldFormula = document.getElementById('fieldFormula');
+    const curlFormula = document.getElementById('curlFormula');
+    const statusText = document.getElementById('statusText');
+
+    const state = {
+      xMin: -6,
+      xMax: 6,
+      yMin: -4.5,
+      yMax: 4.5,
+      progress: 0,
+      playing: true,
+      speed: parseFloat(speedRange.value),
+      density: parseInt(densityRange.value, 10),
+      demoMode: false,
+      demoStage: 0,
+      demoTimer: 0,
+      shape: shapeSelect.value,
+      field: fieldSelect.value,
+      lineIntegral: 0,
+      areaIntegral: 0,
+      error: 0,
+      maxCurlMag: 1.2,
+      localContribution: 0,
+      boundaryCache: [],
+      polygon: []
+    };
+
+    function syncCanvasSize() {
+      const mainRect = canvas.getBoundingClientRect();
+      const mainWidth = Math.max(640, Math.round(mainRect.width));
+      const mainHeight = Math.max(260, Math.round(mainRect.height));
+      if (canvas.width !== mainWidth || canvas.height !== mainHeight) {
+        canvas.width = mainWidth;
+        canvas.height = mainHeight;
+      }
+
+      const miniRect = miniCanvas.getBoundingClientRect();
+      const miniWidth = Math.max(220, Math.round(miniRect.width));
+      const miniHeight = Math.round(miniWidth * 11 / 18);
+      if (miniCanvas.width !== miniWidth || miniCanvas.height !== miniHeight) {
+        miniCanvas.width = miniWidth;
+        miniCanvas.height = miniHeight;
+      }
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function worldToCanvas(x, y) {
+      const px = (x - state.xMin) / (state.xMax - state.xMin) * canvas.width;
+      const py = canvas.height - (y - state.yMin) / (state.yMax - state.yMin) * canvas.height;
+      return { x: px, y: py };
+    }
+
+    function canvasToWorld(px, py) {
+      const x = state.xMin + px / canvas.width * (state.xMax - state.xMin);
+      const y = state.yMin + (canvas.height - py) / canvas.height * (state.yMax - state.yMin);
+      return { x, y };
+    }
+
+    function getBoundaryPoint(t, shape) {
+      const a = 2 * Math.PI * t;
+      switch (shape) {
+        case 'ellipse':
+          return { x: 4.1 * Math.cos(a), y: 2.65 * Math.sin(a) };
+        case 'wavy': {
+          const rx = 3.6 + 0.55 * Math.cos(3 * a);
+          const ry = 2.55 + 0.40 * Math.sin(3 * a + 0.5);
+          return { x: rx * Math.cos(a), y: ry * Math.sin(a) };
+        }
+        case 'circle':
+        default:
+          return { x: 3.1 * Math.cos(a), y: 3.1 * Math.sin(a) };
+      }
+    }
+
+    function buildBoundary(n = 500) {
+      state.boundaryCache = [];
+      for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        state.boundaryCache.push(getBoundaryPoint(t, state.shape));
+      }
+      state.polygon = state.boundaryCache.slice(0, -1);
+    }
+
+    function pointInPolygon(x, y, polygon) {
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].x, yi = polygon[i].y;
+        const xj = polygon[j].x, yj = polygon[j].y;
+        const intersect = ((yi > y) !== (yj > y)) &&
+          (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-9) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    function field(x, y) {
+      switch (state.field) {
+        case 'mixed':
+          return {
+            P: -0.18 * y + 0.04 * x * y,
+            Q: 0.45 * x + 0.03 * x * x
+          };
+        case 'shear':
+          return {
+            P: 0.8 * y,
+            Q: 0
+          };
+        case 'source':
+          return {
+            P: 0.5 * x,
+            Q: 0.5 * y
+          };
+        case 'rotation':
+        default:
+          return {
+            P: -0.6 * y,
+            Q: 0.6 * x
+          };
+      }
+    }
+
+    function curl(x, y) {
+      switch (state.field) {
+        case 'mixed':
+          return (0.45 + 0.06 * x) - (-0.18 + 0.04 * x);
+        case 'shear':
+          return 0 - 0.8;
+        case 'source':
+          return 0 - 0;
+        case 'rotation':
+        default:
+          return 0.6 - (-0.6);
+      }
+    }
+
+    function updateFieldText() {
+      if (state.field === 'rotation') {
+        fieldFormula.innerHTML = '\\(\\mathbf F=(-0.6y,\\,0.6x)\\)';
+        curlFormula.innerHTML = '\\(\\operatorname{curl}\\mathbf F=\\frac{\\partial Q}{\\partial x}-\\frac{\\partial P}{\\partial y}=1.2\\)';
+        state.maxCurlMag = 1.4;
+      } else if (state.field === 'mixed') {
+        fieldFormula.innerHTML = '\\(\\mathbf F=(-0.18y+0.04xy,\\,0.45x+0.03x^2)\\)';
+        curlFormula.innerHTML = '\\(\\operatorname{curl}\\mathbf F=(0.45+0.06x)-(-0.18+0.04x)=0.63+0.02x\\)';
+        state.maxCurlMag = 1.1;
+      } else if (state.field === 'shear') {
+        fieldFormula.innerHTML = '\\(\\mathbf F=(0.8y,\\,0)\\)';
+        curlFormula.innerHTML = '\\(\\operatorname{curl}\\mathbf F=0-0.8=-0.8\\)';
+        state.maxCurlMag = 1.0;
+      } else {
+        fieldFormula.innerHTML = '\\(\\mathbf F=(0.5x,\\,0.5y)\\)';
+        curlFormula.innerHTML = '\\(\\operatorname{curl}\\mathbf F=0-0=0\\)';
+        state.maxCurlMag = 0.8;
+      }
+      if (window.MathJax && MathJax.typesetPromise) {
+        MathJax.typesetPromise([fieldFormula, curlFormula]).catch(() => { });
+      }
+    }
+
+    function drawArrow(ctx, x1, y1, x2, y2, color, width = 2, head = 9, alpha = 1) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - head * Math.cos(angle - Math.PI / 6), y2 - head * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x2 - head * Math.cos(angle + Math.PI / 6), y2 - head * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawGrid() {
+      if (!showGrid.checked) return;
+      ctx.save();
+      ctx.lineWidth = 1;
+      for (let x = Math.ceil(state.xMin); x <= state.xMax; x++) {
+        const p1 = worldToCanvas(x, state.yMin);
+        const p2 = worldToCanvas(x, state.yMax);
+        ctx.strokeStyle = x === 0 ? 'rgba(37,99,235,0.32)' : 'rgba(148,163,184,0.22)';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+      for (let y = Math.ceil(state.yMin); y <= state.yMax; y++) {
+        const p1 = worldToCanvas(state.xMin, y);
+        const p2 = worldToCanvas(state.xMax, y);
+        ctx.strokeStyle = y === 0 ? 'rgba(37,99,235,0.32)' : 'rgba(148,163,184,0.22)';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = 'rgba(100,116,139,0.85)';
+      ctx.font = '13px sans-serif';
+      for (let x = Math.ceil(state.xMin); x <= state.xMax; x++) {
+        if (x === 0) continue;
+        const p = worldToCanvas(x, 0);
+        ctx.fillText(String(x), p.x + 4, p.y - 4);
+      }
+      for (let y = Math.ceil(state.yMin); y <= state.yMax; y++) {
+        if (y === 0) continue;
+        const p = worldToCanvas(0, y);
+        ctx.fillText(String(y), p.x + 5, p.y - 4);
+      }
+      const ox = worldToCanvas(0, 0);
+      ctx.fillStyle = 'rgba(37,99,235,0.95)';
+      ctx.fillText('O', ox.x + 6, ox.y - 6);
+      ctx.restore();
+    }
+
+    function drawHeatmap() {
+      if (!showHeat.checked) return;
+      const cols = state.density;
+      const dx = (state.xMax - state.xMin) / cols;
+      const dy = dx;
+      ctx.save();
+      for (let x = state.xMin; x < state.xMax; x += dx) {
+        for (let y = state.yMin; y < state.yMax; y += dy) {
+          const cx = x + dx / 2;
+          const cy = y + dy / 2;
+          if (!pointInPolygon(cx, cy, state.polygon)) continue;
+          const c = curl(cx, cy);
+          const mag = Math.min(1, Math.abs(c) / Math.max(state.maxCurlMag, 1e-6));
+          let fill;
+          if (c > 0.0001) {
+            fill = `rgba(239, 68, 68, ${0.08 + 0.42 * mag})`;
+          } else if (c < -0.0001) {
+            fill = `rgba(59, 130, 246, ${0.08 + 0.42 * mag})`;
+          } else {
+            fill = 'rgba(255,255,255,0.18)';
+          }
+          const p1 = worldToCanvas(x, y);
+          const p2 = worldToCanvas(x + dx, y + dy);
+          ctx.fillStyle = fill;
+          ctx.fillRect(p1.x, p2.y, p2.x - p1.x, p1.y - p2.y);
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawRegionBoundary() {
+      ctx.save();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(15,23,42,0.92)';
+      ctx.fillStyle = 'rgba(37,99,235,0.07)';
+      ctx.beginPath();
+      state.boundaryCache.forEach((pt, i) => {
+        const p = worldToCanvas(pt.x, pt.y);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(15,23,42,0.86)';
+      ctx.font = 'bold 18px sans-serif';
+      const labelD = worldToCanvas(0, 0.2);
+      ctx.fillText('D', labelD.x - 8, labelD.y);
+      const labelC = worldToCanvas(state.boundaryCache[80].x, state.boundaryCache[80].y);
+      ctx.fillText('C', labelC.x + 8, labelC.y - 8);
+
+      for (let i = 40; i < state.boundaryCache.length - 1; i += 110) {
+        const p1 = state.boundaryCache[i];
+        const p2 = state.boundaryCache[i + 10];
+        const c1 = worldToCanvas(p1.x, p1.y);
+        const c2 = worldToCanvas(p2.x, p2.y);
+        drawArrow(ctx, c1.x, c1.y, c2.x, c2.y, 'rgba(15,23,42,0.72)', 2, 8, 0.9);
+      }
+      ctx.restore();
+    }
+
+    function drawVectorField() {
+      if (!showArrows.checked) return;
+      const nx = 13;
+      const ny = 9;
+      const scale = 26;
+      ctx.save();
+      for (let i = 0; i < nx; i++) {
+        for (let j = 0; j < ny; j++) {
+          const x = lerp(state.xMin + 0.8, state.xMax - 0.8, i / (nx - 1));
+          const y = lerp(state.yMin + 0.8, state.yMax - 0.8, j / (ny - 1));
+          const { P, Q } = field(x, y);
+          const mag = Math.hypot(P, Q);
+          const fac = mag > 1e-6 ? Math.min(1, 0.65 / mag) : 0;
+          const p = worldToCanvas(x, y);
+          const end = worldToCanvas(x + P * fac, y + Q * fac);
+          drawArrow(ctx, p.x, p.y, end.x, end.y, 'rgba(124, 58, 237, 0.78)', 1.8, 7, 0.9);
+        }
+      }
+      ctx.restore();
+    }
+
+    function lineIntegralApprox(segments = 900) {
+      let sum = 0;
+      for (let i = 0; i < segments; i++) {
+        const t1 = i / segments;
+        const t2 = (i + 1) / segments;
+        const p1 = getBoundaryPoint(t1, state.shape);
+        const p2 = getBoundaryPoint(t2, state.shape);
+        const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+        const { P, Q } = field(mid.x, mid.y);
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        sum += P * dx + Q * dy;
+      }
+      return sum;
+    }
+
+    function areaIntegralApprox(res = state.density) {
+      const cols = res;
+      const dx = (state.xMax - state.xMin) / cols;
+      const dy = dx;
+      let sum = 0;
+      for (let x = state.xMin; x < state.xMax; x += dx) {
+        for (let y = state.yMin; y < state.yMax; y += dy) {
+          const cx = x + dx / 2;
+          const cy = y + dy / 2;
+          if (!pointInPolygon(cx, cy, state.polygon)) continue;
+          sum += curl(cx, cy) * dx * dy;
+        }
+      }
+      return sum;
+    }
+
+    function updateMetrics() {
+      state.lineIntegral = lineIntegralApprox(Math.max(500, state.density * 28));
+      state.areaIntegral = areaIntegralApprox(state.density);
+      state.error = Math.abs(state.lineIntegral - state.areaIntegral);
+      lineIntegralValue.textContent = state.lineIntegral.toFixed(4);
+      areaIntegralValue.textContent = state.areaIntegral.toFixed(4);
+      errorValue.textContent = state.error.toFixed(4);
+
+      let msg = '观察：线积分与区域旋度积分正在数值对照。';
+      if (state.field === 'source') {
+        msg = '此时旋度为 0，因此区域内没有净旋转趋势，边界环流和区域积分都接近 0。';
+      } else if (state.field === 'shear') {
+        msg = '剪切场虽然不围绕中心旋转，但其旋度为负常数，因此仍会产生稳定的总环流。';
+      } else if (state.field === 'rotation') {
+        msg = '旋转场的旋度为正常数，整块区域都在“同向旋转”，所以边界总环流也为正。';
+      } else if (state.field === 'mixed') {
+        msg = '混合场的旋度随 x 略有变化，因此热图颜色在区域内会出现轻微变化。';
+      }
+      statusText.textContent = msg;
+    }
+
+    function getCurrentKinematics() {
+      const t = state.progress % 1;
+      const p = getBoundaryPoint(t, state.shape);
+      const delta = 0.002;
+      const prev = getBoundaryPoint((t - delta + 1) % 1, state.shape);
+      const next = getBoundaryPoint((t + delta) % 1, state.shape);
+      const tx = next.x - prev.x;
+      const ty = next.y - prev.y;
+      const tmag = Math.hypot(tx, ty) || 1;
+      const tangent = { x: tx / tmag, y: ty / tmag };
+      const { P, Q } = field(p.x, p.y);
+      const local = P * tangent.x + Q * tangent.y;
+      return { p, tangent, fieldVec: { x: P, y: Q }, local };
+    }
+
+    function drawMovingPoint() {
+      const { p, tangent, fieldVec, local } = getCurrentKinematics();
+      state.localContribution = local;
+      localContributionValue.textContent = local.toFixed(4);
+
+      const c = worldToCanvas(p.x, p.y);
+      const tEnd = worldToCanvas(p.x + tangent.x * 0.85, p.y + tangent.y * 0.85);
+      const fScale = Math.min(0.9, 0.95 / (Math.hypot(fieldVec.x, fieldVec.y) || 1));
+      const fEnd = worldToCanvas(p.x + fieldVec.x * fScale, p.y + fieldVec.y * fScale);
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(249,115,22,0.35)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      for (let i = 0; i <= Math.floor(state.progress * state.boundaryCache.length) % state.boundaryCache.length; i++) {
+        const pt = state.boundaryCache[i];
+        const cp = worldToCanvas(pt.x, pt.y);
+        if (i === 0) ctx.moveTo(cp.x, cp.y);
+        else ctx.lineTo(cp.x, cp.y);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      drawArrow(ctx, c.x, c.y, tEnd.x, tEnd.y, 'rgba(16,185,129,0.95)', 3, 10, 1);
+      drawArrow(ctx, c.x, c.y, fEnd.x, fEnd.y, 'rgba(124,58,237,0.95)', 3, 10, 1);
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(249,115,22,0.95)';
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillStyle = 'rgba(249,115,22,0.95)';
+      ctx.fillText(`F·T ≈ ${local.toFixed(3)}`, c.x + 12, c.y - 12);
+      ctx.fillStyle = 'rgba(16,185,129,0.95)';
+      ctx.fillText('T', tEnd.x + 6, tEnd.y - 4);
+      ctx.fillStyle = 'rgba(124,58,237,0.95)';
+      ctx.fillText('F', fEnd.x + 6, fEnd.y - 4);
+      ctx.restore();
+    }
+
+    function drawTitleOverlay() {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.88)';
+      ctx.strokeStyle = 'rgba(15,23,42,0.08)';
+      roundRect(ctx, 18, 18, 330, 80, 16, true, true);
+      ctx.fillStyle = 'rgba(15,23,42,0.92)';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText('可视化观察窗口', 34, 48);
+      ctx.font = '14px sans-serif';
+      ctx.fillStyle = 'rgba(100,116,139,0.95)';
+      ctx.fillText('左看边界环流，右看区域旋度；两者数值近似相等。', 34, 74);
+      ctx.restore();
+    }
+
+    function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+      if (fill) ctx.fill();
+      if (stroke) ctx.stroke();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawGrid();
+      drawHeatmap();
+      drawVectorField();
+      drawRegionBoundary();
+      drawMovingPoint();
+      drawTitleOverlay();
+    }
+
+    function update(dt) {
+      if (state.playing) {
+        state.progress = (state.progress + dt * 0.000045 * state.speed) % 1;
+      }
+
+      if (state.demoMode) {
+        state.demoTimer += dt;
+        if (state.demoStage === 0 && state.demoTimer > 2600) {
+          showArrows.checked = true;
+          showHeat.checked = false;
+          showGrid.checked = true;
+          state.demoStage = 1;
+          state.demoTimer = 0;
+          statusText.textContent = '课堂模式 第 1 步：先看边界与向量场，理解线积分是“沿边界的累加”。';
+        } else if (state.demoStage === 1 && state.demoTimer > 3000) {
+          showHeat.checked = true;
+          state.demoStage = 2;
+          state.demoTimer = 0;
+          statusText.textContent = '课堂模式 第 2 步：加入旋度热图，观察区域内部局部旋转趋势。';
+        } else if (state.demoStage === 2 && state.demoTimer > 3000) {
+          state.demoStage = 3;
+          state.demoTimer = 0;
+          statusText.textContent = '课堂模式 第 3 步：比较右侧数值，让学生把“图像理解”与“计算验证”对应起来。';
+        } else if (state.demoStage === 3 && state.demoTimer > 3200) {
+          state.demoMode = false;
+          state.demoStage = 0;
+          state.demoTimer = 0;
+          updateMetrics();
+        }
+      }
+    }
+
+    function drawMiniDiagram() {
+      const baseW = 360;
+      const baseH = 220;
+      const sx = miniCanvas.width / baseW;
+      const sy = miniCanvas.height / baseH;
+
+      mctx.clearRect(0, 0, miniCanvas.width, miniCanvas.height);
+      mctx.save();
+      mctx.scale(sx, sy);
+
+      mctx.fillStyle = 'rgba(255,255,255,0.98)';
+      mctx.fillRect(0, 0, baseW, baseH);
+
+      mctx.fillStyle = 'rgba(15,23,42,0.92)';
+      mctx.font = 'bold 16px "Microsoft YaHei", sans-serif';
+      mctx.fillText('微元分割：内部边抵消，外边界保留', 16, 24);
+
+      const cells = [
+        { x: 52, y: 54 },
+        { x: 138, y: 54 },
+        { x: 95, y: 126 }
+      ];
+      const size = 62;
+
+      cells.forEach((cell, idx) => {
+        mctx.fillStyle = idx === 1 ? 'rgba(37,99,235,0.11)' : 'rgba(15,118,110,0.09)';
+        mctx.strokeStyle = 'rgba(15,23,42,0.55)';
+        mctx.lineWidth = 2;
+        roundRect(mctx, cell.x, cell.y, size, size, 8, true, true);
+
+        drawArrow(mctx, cell.x + 10, cell.y + size - 10, cell.x + size - 10, cell.y + size - 10, 'rgba(16,185,129,0.95)', 2, 7, 1);
+        drawArrow(mctx, cell.x + size - 10, cell.y + size - 10, cell.x + size - 10, cell.y + 10, 'rgba(16,185,129,0.95)', 2, 7, 1);
+        drawArrow(mctx, cell.x + size - 10, cell.y + 10, cell.x + 10, cell.y + 10, 'rgba(16,185,129,0.95)', 2, 7, 1);
+        drawArrow(mctx, cell.x + 10, cell.y + 10, cell.x + 10, cell.y + size - 10, 'rgba(16,185,129,0.95)', 2, 7, 1);
+      });
+
+      mctx.strokeStyle = 'rgba(59,130,246,0.95)';
+      mctx.lineWidth = 3;
+      roundRect(mctx, 40, 42, 176, 156, 16, false, true);
+      mctx.fillStyle = 'rgba(59,130,246,0.96)';
+      mctx.font = 'bold 14px "Microsoft YaHei", sans-serif';
+      mctx.fillText('最外层蓝框 = 最终保留的边界 C', 38, 213);
+
+      mctx.strokeStyle = 'rgba(220,38,38,0.85)';
+      mctx.lineWidth = 4;
+      mctx.beginPath();
+      mctx.moveTo(138, 64);
+      mctx.lineTo(138, 116);
+      mctx.stroke();
+      mctx.beginPath();
+      mctx.moveTo(110, 126);
+      mctx.lineTo(165, 126);
+      mctx.stroke();
+
+      roundRect(mctx, 228, 62, 116, 70, 10, true, true);
+      mctx.fillStyle = 'rgba(220,38,38,0.92)';
+      mctx.font = 'bold 14px "Microsoft YaHei", sans-serif';
+      mctx.fillText('红色公共边', 242, 86);
+      mctx.fillText('方向相反', 252, 106);
+      mctx.fillText('积分互相抵消', 236, 126);
+
+      drawArrow(mctx, 216, 82, 228, 82, 'rgba(220,38,38,0.85)', 2.5, 7, 1);
+      drawArrow(mctx, 197, 126, 228, 110, 'rgba(220,38,38,0.85)', 2.5, 7, 1);
+
+      mctx.restore();
+    }
+
+    function rebuild() {
+      syncCanvasSize();
+      state.shape = shapeSelect.value;
+      state.field = fieldSelect.value;
+      state.density = parseInt(densityRange.value, 10);
+      state.speed = parseFloat(speedRange.value);
+      densityLabel.textContent = state.density;
+      speedLabel.textContent = `${state.speed.toFixed(1)}×`;
+      buildBoundary();
+      updateFieldText();
+      updateMetrics();
+      drawMiniDiagram();
+    }
+
+    let last = performance.now();
+    function animate(now) {
+      const dt = now - last;
+      last = now;
+      update(dt);
+      render();
+      requestAnimationFrame(animate);
+    }
+
+    shapeSelect.addEventListener('change', rebuild);
+    fieldSelect.addEventListener('change', rebuild);
+    densityRange.addEventListener('input', rebuild);
+    speedRange.addEventListener('input', rebuild);
+    showArrows.addEventListener('change', render);
+    showHeat.addEventListener('change', render);
+    showGrid.addEventListener('change', render);
+
+    window.addEventListener('resize', () => {
+      syncCanvasSize();
+      drawMiniDiagram();
+      updateMetrics();
+      render();
+    });
+
+    playBtn.addEventListener('click', () => {
+      state.playing = !state.playing;
+      playBtn.textContent = state.playing ? '暂停动画' : '开始动画';
+    });
+
+    resetBtn.addEventListener('click', () => {
+      state.progress = 0;
+      state.demoMode = false;
+      state.demoStage = 0;
+      state.demoTimer = 0;
+      updateMetrics();
+    });
+
+    demoBtn.addEventListener('click', () => {
+      state.demoMode = true;
+      state.demoStage = 0;
+      state.demoTimer = 0;
+      state.progress = 0;
+      state.playing = true;
+      playBtn.textContent = '暂停动画';
+      showArrows.checked = true;
+      showGrid.checked = true;
+      showHeat.checked = false;
+      statusText.textContent = '课堂模式：先聚焦边界线积分。';
+    });
+
+    syncCanvasSize();
+    rebuild();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+
+</html>
