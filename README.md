@@ -58,7 +58,7 @@ pip install pyinstaller
 
 ## 教学材料
 
-这些页面不是手写出来的，而是用 AI 逐轮改出来的，过程记录在 `materials/`：
+可以仿照教程进行AI辅助开发，过程记录在 `materials/`：
 
 | 文档 | 内容 |
 | --- | --- |
