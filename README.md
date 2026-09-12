@@ -82,14 +82,6 @@ pip install pyinstaller
 └── requirements.txt
 ```
 
-## 未包含在仓库中的内容
-
-为免仓库体积失控，以下内容留在本地、不随仓库分发：
-
-- 课堂录屏 `videos/`，约 77 MB
-- 打包产物 `dist/`，约 150 MB，可用 `scripts/build.ps1` 从源码重新生成
-- 教学文档的 `.docx` 原稿，仓库里只放同名 PDF
-
 ## License
 
 代码与文档以 MIT 许可发布，详见 [LICENSE](LICENSE)。用于教学、二次修改均无需额外授权。
